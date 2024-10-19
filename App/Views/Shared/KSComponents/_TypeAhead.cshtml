@@ -1,0 +1,8 @@
+@model HtmxConfig
+
+<div style="width: 50%;">
+    <input style="width: 100%" type="text" name="query" id="typeahead" @Html.Raw(Model.ToString()) autocomplete="off"
+        placeholder="Type to search..." />
+
+    <div class="type-ah-result" id="@Model.HxTarget"></div>
+</div>

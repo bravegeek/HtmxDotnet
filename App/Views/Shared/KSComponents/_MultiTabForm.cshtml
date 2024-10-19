@@ -1,0 +1,175 @@
+@using HtmxDotnet.BuilderViews
+@model MultiTabFormViewModel
+
+@{
+    var hb = new HtmxDotnet.utils.HtmlBuilder();
+    var view = new MultiTabFormBV();
+    var html = view.RenderHtml(hb, Model).Build();
+}
+
+<br>
+@Html.Raw(html)
+<br>
+
+@* <h3>MultiTabForm</h3>
+
+<ul class="nav nav-tabs" id="myTab" role="tablist">
+<li class="nav-item">
+<a class="nav-link active" id="personal-tab" href="#" data-tab="personal-info">Personal Info</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" id="address-tab" href="#" data-tab="address-info">Address Info</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" id="favorites-tab" href="#" data-tab="favorites-info">Favorites Info</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" id="confirmation-tab" href="#" data-tab="confirmation">Confirmation</a>
+</li>
+</ul>
+
+<div id="tabContent" class="tab-content">
+<div id="personal-info" class="tab-pane fade show active">
+<div class="form-group">
+<label for="firstName">First Name</label>
+<input type="text" class="form-control" id="firstName" name="PersonalInfo.FirstName"
+value="@Model.PersonalInfo.FirstName" required />
+</div>
+<div class="form-group">
+<label for="lastName">Last Name</label>
+<input type="text" class="form-control" id="lastName" name="PersonalInfo.LastName"
+value="@Model.PersonalInfo.LastName" required />
+</div>
+<div class="form-group">
+<label for="email">Email</label>
+<input type="email" class="form-control" id="email" name="PersonalInfo.Email"
+value="@Model.PersonalInfo.Email" required />
+</div>
+</div>
+
+<div id="address-info" class="tab-pane fade">
+<div class="form-group">
+<label for="streetAddress">Street</label>
+<input type="text" class="form-control" id="streetAddress" name="AddressInfo.StreetAddress"
+value="@Model.AddressInfo.StreetAddress" required />
+</div>
+<div class="form-group">
+<label for="city">City</label>
+<input type="text" class="form-control" id="city" name="AddressInfo.City" value="@Model.AddressInfo.City"
+required />
+</div>
+<div class="form-group">
+<label for="zipCode">Zip Code</label>
+<input type="text" class="form-control" id="zipCode" name="AddressInfo.ZipCode"
+value="@Model.AddressInfo.ZipCode" required />
+</div>
+</div>
+@{
+var htmxConfigFood = new HtmxConfig
+{
+HxAction = "hx-get", // Set to hx-get for typeahead
+HxUrl = "kitchensink/TypeAheadSearch", // The URL endpoint for the search action
+HxTrigger = "keyup changed delay:500ms", // Trigger on keyup with debounce
+HxTarget = "resultsFood", // Target the div where results will be displayed
+};
+
+var htmxConfigColor = new HtmxConfig
+{
+HxAction = "hx-get", // Set to hx-get for typeahead
+HxUrl = "kitchensink/TypeAheadSearchColor", // The URL endpoint for the search action
+HxTrigger = "keyup changed delay:500ms", // Trigger on keyup with debounce
+HxTarget = "resultsColor", // Target the div where results will be displayed
+};
+}
+<div id="favorites-info" class="tab-pane fade">
+<div class="form-group">
+<label for="favoriteColor">Favorite Color</label>
+<input type="text" class="form-control" id="favoriteColor" name="FavoritesInfo.FavoriteColor"
+value="@Model.FavoritesInfo.FavoriteColor" required />
+<div style="margin-top: 10px;">
+<label>Search suggestions</label>
+@await Html.PartialAsync("KSComponents/_TypeAhead", htmxConfigColor)
+</div>
+
+</div>
+<div class="form-group">
+<label for="favoriteFood">Favorite Food</label>
+<input type="text" class="form-control" id="favoriteFood" name="FavoritesInfo.FavoriteFood"
+value="@Model.FavoritesInfo.FavoriteFood" required />
+<div style="margin-top: 10px;">
+<label>Search suggestions</label>
+@await Html.PartialAsync("KSComponents/_TypeAhead", htmxConfigFood)
+</div>
+</div>
+</div>
+
+
+<div id="confirmation" class="tab-pane fade">
+<p>Please review your information before submitting.</p>
+</div>
+</div>
+
+<div id="formResponse"></div> <!-- HTMX will replace this div with the server's response -->
+
+<script>
+document.querySelectorAll('.nav-link').forEach(function (tab) {
+tab.addEventListener('click', function (e) {
+document.querySelectorAll('.tab-pane').forEach(function (pane) {
+pane.classList.remove('show', 'active');
+});
+document.querySelectorAll('.nav-link').forEach((tab => {
+tab.classList.remove('active');
+}))
+document.querySelector(`#${this.dataset.tab}`).classList.add('show', 'active');
+e.target.classList.add('active');
+});
+});
+
+
+
+
+const colorInput = document.getElementById('favoriteColor');
+const foodInput = document.getElementById('favoriteFood');
+
+
+function handleColorSuggestionClick(event) {
+let target = event.target;
+
+// Traverse up to find the parent span with class 'suggestion'
+while (target && !target.classList.contains('suggestion')) {
+target = target.parentElement;
+}
+
+if (target) {
+// Perform your actions here
+console.log('Color Suggestion span clicked:', target.innerText);
+colorInput.value = target.innerText;
+}
+}
+
+function handleFoodSuggestionClick(event) {
+let target = event.target;
+
+// Traverse up to find the parent span with class 'suggestion'
+while (target && !target.classList.contains('suggestion')) {
+target = target.parentElement;
+}
+
+if (target) {
+// Perform your actions here
+console.log('Color Suggestion span clicked:', target.innerText);
+foodInput.value = target.innerText;
+}
+}
+
+const colorSuggestionDiv = document.getElementById('@htmxConfigColor.HxTarget');
+colorSuggestionDiv.addEventListener('click', handleColorSuggestionClick);
+
+const foodSuggestionDiv = document.getElementById('@htmxConfigFood.HxTarget');
+foodSuggestionDiv.addEventListener('click', handleFoodSuggestionClick);
+
+</script>
+
+<form id="multiTabForm">
+<button type="submit" class="btn btn-primary">Submit</button>
+</form> *@

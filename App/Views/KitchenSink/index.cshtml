@@ -1,0 +1,92 @@
+﻿@using HtmxDotnet.utils
+
+<h2>Hello from the Kitchen sink!</h2>
+
+<br>
+@{
+    var htmxConfig = new HtmxConfig
+            {
+                HxAction = "hx-get", // Set to hx-get for typeahead
+                HxUrl = "kitchensink/TypeAheadSearch", // The URL endpoint for the search action
+                HxTrigger = "keyup changed delay:500ms", // Trigger on keyup with debounce
+                HxTarget = "results", // Target the div where results will be displayed
+            };
+}
+@await Html.PartialAsync("KSComponents/_TypeAhead", htmxConfig)
+
+<br>
+@{
+    var mtfvm = new MultiTabFormViewModel();
+}
+
+@await Html.PartialAsync("KSComponents/_MultiTabForm", mtfvm)
+
+<br>
+
+
+<style>
+    .type-ah-result {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        /* Space between the suggestion boxes */
+        border: 1px solid #ccc;
+        /* Light grey border around the container */
+        padding: 10px;
+        /* Padding inside the border */
+        border-radius: 8px;
+        /* Rounded corners for the border */
+        background-color: #fff;
+        /* Optional: White background for the container */
+        width: 100%;
+        /* Match the width of the input element */
+        max-height: 200px;
+        /* Adjust this value based on the desired height */
+        overflow-y: auto;
+        /* Enable vertical scrolling if content exceeds max-height */
+        overflow-x: hidden;
+        /* Hide horizontal scrolling if not needed */
+        box-sizing: border-box;
+        /* Include padding and border in the element's total width and height */
+    }
+
+    /* Style for each suggestion */
+    .suggestion {
+        background-color: #f0f0f0;
+        /* Light grey background */
+        color: #333;
+        /* Dark text color for readability */
+        padding: 5px 10px;
+        /* Padding inside the suggestion box */
+        border-radius: 8px;
+        /* Rounded corners */
+        border: 1px solid #ccc;
+        /* Light grey border */
+        display: inline-block;
+        /* Display as inline-block to fit content */
+        margin: 2px;
+        /* Space around each suggestion */
+        white-space: nowrap;
+        /* Prevent text wrapping */
+    }
+
+    .suggestion:hover {
+        background-color: #e9e9e9;
+    }
+
+    /* Highlighted text style */
+    .highlight {
+        background-color: #d4edda;
+        /* Light green background for highlighted text */
+        color: #155724;
+        /* Dark green text color for highlighted text */
+        font-weight: bold;
+        /* Make highlighted text bold */
+        border-radius: 3px;
+        /* Rounded corners for highlighted text */
+    }
+
+    .radio-option {
+        margin: 5px;
+    }
+</style>

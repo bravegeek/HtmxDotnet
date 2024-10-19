@@ -1,0 +1,25 @@
+{
+  "name": "htmxdotnet",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "buildSite": "node esbuild.config.js buildSite",
+    "watchSite": "npm run watch:js && npm run watch:css",
+    "buildGame": "node esbuild.config.js buildGame",
+    "watchGame": "node esbuild.config.js watchGame"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "esbuild-plugin-typescript": "^2.0.0-next.1"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "glob": "^11.0.0",
+    "htmx.org": "^2.0.3"
+  }
+}
