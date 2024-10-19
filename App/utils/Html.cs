@@ -9,8 +9,8 @@ namespace HtmxDotnet.utils
         public HtmlTag Tag { get; set; }
         public Dictionary<string, string> Attributes { get; } = [];
         public HashSet<string> CssClasses { get; } = [];
-        public Dictionary<string, string> DataAttributes { get; } = [];
         public StringBuilder Text { get; } = new StringBuilder();
+        public int CurrentTextContentIndex { get; set; } = 0;
         public List<(HtmlNode Node, int Position)> Children { get; } = [];
 
         public HtmlNode(HtmlTag tag)
@@ -23,7 +23,7 @@ namespace HtmxDotnet.utils
     public class HtmlBuilder
     {
         private readonly Stack<HtmlNode> _nodeStack = new Stack<HtmlNode>();
-        private HtmlNode _rootNode;
+        private readonly HtmlNode _rootNode;
         // Open a new tag and add it to the stack
 
         public HtmlBuilder(HtmlTag rootTag = HtmlTag.Div)
@@ -34,33 +34,26 @@ namespace HtmxDotnet.utils
         public HtmlBuilder Open(HtmlTag tag)
         {
             var newNode = new HtmlNode(tag);
-            if (_nodeStack.Count > 0)
-            {
-                // Record the child and the position in the parent's text
-                var parent = _nodeStack.Peek();
-                parent.Children.Add((newNode, parent.Text.Length));
-            }
-            else
-            {
-                _rootNode = newNode;
-            }
+            var parent = _nodeStack.Peek();
+            parent.Children.Add((newNode, parent.CurrentTextContentIndex));
             _nodeStack.Push(newNode);
+
             return this;
         }
 
         // Close the current tag and pop the stack
-        public HtmlBuilder Close(HtmlTag? tag = null)
+        public HtmlBuilder Close(HtmlTag tag)
         {
             if (_nodeStack.Count <= 1)
             {
                 return this;
             }
 
-            if (tag != null && _nodeStack.Peek().Tag != tag)
+            if (_nodeStack.Peek().Tag != tag)
             {
                 throw new Exception(
                 $@"ERROR: Incorrect closing tag used. 
-                       Received: [{tag.Value.ToTagName()}]
+                       Received: [{tag.ToTagName()}]
                        Wants: [{_nodeStack.Peek().Tag.ToTagName()}]
 
                     ");
@@ -71,21 +64,33 @@ namespace HtmxDotnet.utils
             return this;
         }
 
+        public HtmlBuilder Close()
+        {
+            if (_nodeStack.Count < 1)
+            {
+                return this;
+            }
+
+            _nodeStack.Pop();
+
+            return this;
+        }
+
         // Add arbitrary attributes
-        public HtmlBuilder AddAttributes(params (string, string)[] attributes)
+        public HtmlBuilder AddAttributes(params (string name, string value)[] attributes)
         {
             if (_nodeStack.Count > 0)
             {
                 var curNodeAttrs = _nodeStack.Peek().Attributes;
-                foreach (var (key, value) in attributes)
+                foreach (var (name, value) in attributes)
                 {
-                    if (key == "class")
+                    if (name == "class" && !string.IsNullOrEmpty(value))
                     {
                         AddCssClasses(value.Split(' ')); // Intercept CSS classes
                         continue;
                     }
 
-                    curNodeAttrs[key] = value;
+                    curNodeAttrs[name] = value;
                 }
             }
             return this;
@@ -108,7 +113,8 @@ namespace HtmxDotnet.utils
         // Set the ID attribute
         public HtmlBuilder WithId(string id)
         {
-            return AddAttributes(("id", id));
+            _nodeStack.Peek().Attributes.Add("id", id);
+            return this;
         }
 
         // Add data-* attributes
@@ -119,7 +125,7 @@ namespace HtmxDotnet.utils
                 return this;
             }
 
-            var curNodeDataAttrs = _nodeStack.Peek().DataAttributes;
+            var curNodeDataAttrs = _nodeStack.Peek().Attributes;
 
             foreach (var (key, value) in dataAttributes)
             {
@@ -130,11 +136,13 @@ namespace HtmxDotnet.utils
         }
 
         // Add text to the current node
-        public HtmlBuilder AddText(string text)
+        public HtmlBuilder AddText(ReadOnlySpan<char> text)
         {
             if (_nodeStack.Count > 0)
             {
-                _nodeStack.Peek().Text.Append(text.AsSpan());
+                var node = _nodeStack.Peek();
+                node.Text.Append(text);
+                node.CurrentTextContentIndex = node.Text.Length;
             }
             return this;
         }
@@ -159,32 +167,33 @@ namespace HtmxDotnet.utils
         }
 
         // Recursively build the node and its children
-        private void BuildNode(HtmlNode node, StringBuilder sb)
+        private static void BuildNode(HtmlNode node, StringBuilder sb)
         {
             var nodeText = node.Text.ToString().AsSpan();
-            var nodeTag = node.Tag.ToTagName().AsSpan();
+            var nodeTag = node.Tag;
+            var nodeTagText = node.Tag.ToTagName().AsSpan();
             var nodeChildren = node.Children;
             var nodeAttrs = node.Attributes;
             var nodeCssClasses = node.CssClasses;
-            var nodeDataAttrs = node.DataAttributes;
 
             // Open tag
-            sb.Append('<').Append(nodeTag);
-
-            // Add attributes
-            foreach (var (key, value) in nodeAttrs)
-            {
-                sb.Append(' ').Append(key.AsSpan()).Append("=\"").Append(value.AsSpan()).Append('"');
-            }
+            sb.Append('<').Append(nodeTagText);
 
             // Add CSS classes if present
             if (nodeCssClasses.Count > 0)
             {
-                sb.Append(" class=\"").Append(string.Join(' ', nodeCssClasses)).Append('"');
+                sb.Append(" class=\"");
+
+                foreach (var cssClass in nodeCssClasses)
+                {
+                    sb.Append(cssClass.AsSpan()).Append(' ');
+                }
+
+                sb.Append('"');
             }
 
-            // Add data-* attributes
-            foreach (var (key, value) in nodeDataAttrs)
+            // Add attributes
+            foreach (var (key, value) in nodeAttrs)
             {
                 sb.Append(' ').Append(key.AsSpan()).Append("=\"").Append(value.AsSpan()).Append('"');
             }
@@ -193,6 +202,7 @@ namespace HtmxDotnet.utils
 
             // Add text content before the first child
             int lastPosition = 0;
+
             foreach (var (child, position) in nodeChildren)
             {
                 sb.Append(nodeText[lastPosition..position]);
@@ -204,13 +214,33 @@ namespace HtmxDotnet.utils
             sb.Append(nodeText[lastPosition..]);
 
             // Close tag
-            sb.Append("</").Append(nodeTag).Append('>');
+            if (!nodeTag.IsSelfClosing())
+            {
+                sb.Append("</").Append(nodeTagText).Append('>');
+            }
         }
     }
 
     public static class HtmlTagEnumExtensions
     {
+        private static readonly HashSet<HtmlTag> _selfClosingTags = [
+            HtmlTag.Area,
+            HtmlTag.Base,
+            HtmlTag.Br,
+            HtmlTag.Col,
+            HtmlTag.Embed,
+            HtmlTag.Hr,
+            HtmlTag.Img,
+            HtmlTag.Input,
+            HtmlTag.Link,
+            HtmlTag.Meta,
+            HtmlTag.Param,
+            HtmlTag.Source,
+            HtmlTag.Track,
+            HtmlTag.Wbr
+        ];
         private static Dictionary<HtmlTag, string> _tagNameFlyWeight = []; //Cache tag strings, save some memory!
+
         public static string ToTagName(this HtmlTag tag)
         {
             if (_tagNameFlyWeight.ContainsKey(tag))
@@ -222,6 +252,11 @@ namespace HtmxDotnet.utils
             _tagNameFlyWeight[tag] = res;
 
             return res;
+        }
+
+        public static bool IsSelfClosing(this HtmlTag tag)
+        {
+            return _selfClosingTags.Contains(tag);
         }
     }
 
