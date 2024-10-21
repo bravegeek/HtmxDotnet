@@ -1,17 +1,17 @@
-using System.ComponentModel.DataAnnotations;
+using System.Collections.Concurrent;
 using System.Text;
 using HtmxDotnet.BuilderViews;
 
 namespace HtmxDotnet.utils
 {
-    public class HtmlNode
+    internal class HtmlNode
     {
         public HtmlTag Tag { get; set; }
-        public Dictionary<string, string> Attributes { get; } = [];
-        public HashSet<string> CssClasses { get; } = [];
-        public StringBuilder Text { get; } = new StringBuilder();
+        public Dictionary<string, string>? Attributes { get; set; }
+        public HashSet<string>? CssClasses { get; set; }
+        public StringBuilder? Text { get; set; }
         public int CurrentTextContentIndex { get; set; } = 0;
-        public List<(HtmlNode Node, int Position)> Children { get; } = [];
+        public List<(HtmlNode Node, int Position)>? Children { get; set; }
 
         public HtmlNode(HtmlTag tag)
         {
@@ -22,8 +22,9 @@ namespace HtmxDotnet.utils
 
     public class HtmlBuilder
     {
-        private readonly Stack<HtmlNode> _nodeStack = new Stack<HtmlNode>();
+        private readonly Stack<HtmlNode> _nodeStack = new();
         private readonly HtmlNode _rootNode;
+        private static readonly ThreadLocal<StringBuilder> ThreadLocalSanitizationStringBuilder = new();
         // Open a new tag and add it to the stack
 
         public HtmlBuilder(HtmlTag rootTag = HtmlTag.Div)
@@ -31,11 +32,12 @@ namespace HtmxDotnet.utils
             _rootNode = new HtmlNode(rootTag);
             _nodeStack.Push(_rootNode);
         }
+
         public HtmlBuilder Open(HtmlTag tag)
         {
             var newNode = new HtmlNode(tag);
             var parent = _nodeStack.Peek();
-            parent.Children.Add((newNode, parent.CurrentTextContentIndex));
+            getNodeChildren(parent).Add((newNode, parent.CurrentTextContentIndex));
             _nodeStack.Push(newNode);
 
             return this;
@@ -66,7 +68,7 @@ namespace HtmxDotnet.utils
 
         public HtmlBuilder Close()
         {
-            if (_nodeStack.Count < 1)
+            if (_nodeStack.Count <= 1)
             {
                 return this;
             }
@@ -79,53 +81,45 @@ namespace HtmxDotnet.utils
         // Add arbitrary attributes
         public HtmlBuilder AddAttributes(params (string name, string value)[] attributes)
         {
-            if (_nodeStack.Count > 0)
+            var curNodeAttrs = getNodeAttributes(_nodeStack.Peek());
+            foreach (var (name, value) in attributes)
             {
-                var curNodeAttrs = _nodeStack.Peek().Attributes;
-                foreach (var (name, value) in attributes)
+                if (name == "class" && !string.IsNullOrEmpty(value))
                 {
-                    if (name == "class" && !string.IsNullOrEmpty(value))
-                    {
-                        AddCssClasses(value.Split(' ')); // Intercept CSS classes
-                        continue;
-                    }
-
-                    curNodeAttrs[name] = value;
+                    AddCssClasses(value.Split(' ')); // Intercept CSS classes
+                    continue;
                 }
+
+                curNodeAttrs[name] = value;
             }
+
             return this;
         }
 
         // Add CSS classes
         public HtmlBuilder AddCssClasses(params string[] cssClasses)
         {
-            if (_nodeStack.Count > 0)
+            var curNodeCssClasses = getNodeCssClasses(_nodeStack.Peek());
+            foreach (var cssClass in cssClasses)
             {
-                var curNodeCssClasses = _nodeStack.Peek().CssClasses;
-                foreach (var cssClass in cssClasses)
-                {
-                    curNodeCssClasses.Add(cssClass);
-                }
+                curNodeCssClasses.Add(cssClass);
             }
+
             return this;
         }
 
         // Set the ID attribute
         public HtmlBuilder WithId(string id)
         {
-            _nodeStack.Peek().Attributes.Add("id", id);
+            getNodeAttributes(_nodeStack.Peek()).Add("id", id);
+
             return this;
         }
 
         // Add data-* attributes
         public HtmlBuilder AddDataAttributes(params (string, string)[] dataAttributes)
         {
-            if (_nodeStack.Count <= 0)
-            {
-                return this;
-            }
-
-            var curNodeDataAttrs = _nodeStack.Peek().Attributes;
+            var curNodeDataAttrs = getNodeAttributes(_nodeStack.Peek());
 
             foreach (var (key, value) in dataAttributes)
             {
@@ -136,16 +130,21 @@ namespace HtmxDotnet.utils
         }
 
         // Add text to the current node
-        public HtmlBuilder AddText(ReadOnlySpan<char> text)
+        public HtmlBuilder AddText(string text)
         {
-            if (_nodeStack.Count > 0)
-            {
-                var node = _nodeStack.Peek();
-                node.Text.Append(text);
-                node.CurrentTextContentIndex = node.Text.Length;
-            }
+            var node = _nodeStack.Peek();
+            var nodeText = getNodeText(node);
+            nodeText.Append(text);
+            node.CurrentTextContentIndex = nodeText.Length;
             return this;
         }
+
+        public HtmlBuilder SanitizeAndAddText(string text)
+        {
+            AddText(SanitizeText(text));
+            return this;
+        }
+
 
         public HtmlBuilder RenderBuilderView<VT>(IBuilderView<VT> bv, VT model)
         {
@@ -156,22 +155,70 @@ namespace HtmxDotnet.utils
         // Build the final HTML string
         public string Build()
         {
-            if (_rootNode == null)
-            {
-                throw new InvalidOperationException("No root node present. You must open at least one tag.");
-            }
-
             var stringBuilder = new StringBuilder();
             BuildNode(_rootNode, stringBuilder);
+
             return stringBuilder.ToString();
+        }
+
+        private StringBuilder getNodeText(HtmlNode node)
+        {
+            if (node.Text != null)
+            {
+                return node.Text;
+            }
+
+            var sb = new StringBuilder();
+            node.Text = sb;
+
+            return sb;
+        }
+
+        private Dictionary<string, string> getNodeAttributes(HtmlNode node)
+        {
+            if (node.Attributes != null)
+            {
+                return node.Attributes;
+            }
+
+            var dic = new Dictionary<string, string>();
+            node.Attributes = dic;
+
+            return dic;
+        }
+
+        private HashSet<string> getNodeCssClasses(HtmlNode node)
+        {
+            if (node.CssClasses != null)
+            {
+                return node.CssClasses;
+            }
+
+            var hs = new HashSet<string>();
+            node.CssClasses = hs;
+
+            return hs;
+        }
+
+        private List<(HtmlNode Node, int Postion)> getNodeChildren(HtmlNode node)
+        {
+            if (node.Children != null)
+            {
+                return node.Children;
+            }
+
+            var children = new List<(HtmlNode Node, int Position)>();
+            node.Children = children;
+
+            return children;
         }
 
         // Recursively build the node and its children
         private static void BuildNode(HtmlNode node, StringBuilder sb)
         {
-            var nodeText = node.Text.ToString().AsSpan();
+            var nodeText = node.Text?.GetChunks();
             var nodeTag = node.Tag;
-            var nodeTagText = node.Tag.ToTagName().AsSpan();
+            var nodeTagText = node.Tag.ToTagName();
             var nodeChildren = node.Children;
             var nodeAttrs = node.Attributes;
             var nodeCssClasses = node.CssClasses;
@@ -180,38 +227,59 @@ namespace HtmxDotnet.utils
             sb.Append('<').Append(nodeTagText);
 
             // Add CSS classes if present
-            if (nodeCssClasses.Count > 0)
+            if (nodeCssClasses != null && nodeCssClasses.Count > 0)
             {
                 sb.Append(" class=\"");
 
                 foreach (var cssClass in nodeCssClasses)
                 {
-                    sb.Append(cssClass.AsSpan()).Append(' ');
+                    sb.Append(cssClass).Append(' ');
                 }
 
                 sb.Append('"');
             }
 
             // Add attributes
-            foreach (var (key, value) in nodeAttrs)
+            if (nodeAttrs != null)
             {
-                sb.Append(' ').Append(key.AsSpan()).Append("=\"").Append(value.AsSpan()).Append('"');
+                foreach (var (key, value) in nodeAttrs)
+                {
+                    sb.Append(' ').Append(key).Append("=\"").Append(value).Append('"');
+                }
             }
 
             sb.Append('>');
 
             // Add text content before the first child
+
             int lastPosition = 0;
 
-            foreach (var (child, position) in nodeChildren)
+            if (nodeChildren != null)
             {
-                sb.Append(nodeText[lastPosition..position]);
-                BuildNode(child, sb);
-                lastPosition = position;
+                foreach (var (child, position) in nodeChildren)
+                {
+                    if (nodeText != null)
+                    {
+                        foreach (var chunk in nodeText)
+                        {
+                            var tSpan = chunk.Span;
+                            sb.Append(tSpan[lastPosition..position]);
+                        }
+                    }
+                    BuildNode(child, sb);
+                    lastPosition = position;
+                }
             }
 
             // Add remaining text after the last child
-            sb.Append(nodeText[lastPosition..]);
+            if (nodeText != null)
+            {
+                foreach (var chunk in nodeText)
+                {
+                    var tSpan = chunk.Span;
+                    sb.Append(tSpan[lastPosition..]);
+                }
+            }
 
             // Close tag
             if (!nodeTag.IsSelfClosing())
@@ -219,44 +287,104 @@ namespace HtmxDotnet.utils
                 sb.Append("</").Append(nodeTagText).Append('>');
             }
         }
+
+        public static string SanitizeText(ReadOnlySpan<char> text)
+        {
+            var sb = ThreadLocalSanitizationStringBuilder.Value;
+
+            if (sb == null)
+            {
+                sb = new StringBuilder();
+                ThreadLocalSanitizationStringBuilder.Value = sb;
+            }
+
+            for (var i = 0; i < text.Length; i++)
+            {
+                switch (text[i])
+                {
+                    case '<':
+                        sb.Append("&lt;");
+                        break;
+                    case '>':
+                        sb.Append("&gt;");
+                        break;
+                    case '&':
+                        sb.Append("&amp;");
+                        break;
+                    case '"':
+                        sb.Append("&quot;");
+                        break;
+                    case '\'':
+                        sb.Append("&#39;");
+                        break;
+                    case '/':   // Optional: Prevent closing script tags like </script>
+                        sb.Append("&#47;");
+                        break;
+
+                    case '\\':
+                        sb.Append("\\\\");
+                        break;
+                    case '\n':
+                        sb.Append("\\n");
+                        break;
+                    case '\r':
+                        sb.Append("\\r");
+                        break;
+
+                    default:
+                        sb.Append(text[i]);
+                        break;
+                }
+            }
+
+            var sanitizedText = sb.ToString();
+
+            if (sb.Capacity > 256)
+            {
+                ThreadLocalSanitizationStringBuilder.Value = new StringBuilder();
+                return sanitizedText;
+            }
+
+            sb.Clear();
+            return sanitizedText;
+        }
     }
 
     public static class HtmlTagEnumExtensions
     {
-        private static readonly HashSet<HtmlTag> _selfClosingTags = [
-            HtmlTag.Area,
+        private static readonly HtmlTag[] _selfClosingTags = [
+            HtmlTag.Meta,
+            HtmlTag.Link,
             HtmlTag.Base,
             HtmlTag.Br,
-            HtmlTag.Col,
-            HtmlTag.Embed,
-            HtmlTag.Hr,
+            HtmlTag.Wbr,
             HtmlTag.Img,
-            HtmlTag.Input,
-            HtmlTag.Link,
-            HtmlTag.Meta,
+            HtmlTag.Embed,
             HtmlTag.Param,
             HtmlTag.Source,
             HtmlTag.Track,
-            HtmlTag.Wbr
+            HtmlTag.Area,
+            HtmlTag.Col,
+            HtmlTag.Hr
         ];
-        private static Dictionary<HtmlTag, string> _tagNameFlyWeight = []; //Cache tag strings, save some memory!
+        private static ConcurrentDictionary<HtmlTag, string> _tagNameFlyWeight = []; //Cache tag strings, save some memory!
 
         public static string ToTagName(this HtmlTag tag)
         {
-            if (_tagNameFlyWeight.ContainsKey(tag))
-            {
-                return _tagNameFlyWeight[tag];
-            }
-
-            var res = tag.ToString().ToLower();
-            _tagNameFlyWeight[tag] = res;
-
-            return res;
+            return _tagNameFlyWeight.GetOrAdd(tag, tag => tag.ToString().ToLower());
         }
 
         public static bool IsSelfClosing(this HtmlTag tag)
         {
-            return _selfClosingTags.Contains(tag);
+            for (var i = 0; i < _selfClosingTags.Length; i++)
+            {
+                if (_selfClosingTags[i] == tag)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 
@@ -298,7 +426,6 @@ namespace HtmxDotnet.utils
         Em,
         Strong,
         Small,
-        S,
         Cite,
         Q,
         Dfn,
@@ -374,8 +501,6 @@ namespace HtmxDotnet.utils
         Details,
         Summary,
         Dialog,
-        Menu,
-        Menuitem,
 
         // Lists
         Ul,

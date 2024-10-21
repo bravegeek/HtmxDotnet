@@ -34,6 +34,14 @@ namespace HtmxDotnet.BuilderViews
                     .AddText("MultiTabForm")
                 .Close(HtmlTag.H3)
 
+                .Open(HtmlTag.Div).AddCssClasses("user-input")
+                    .Open(HtmlTag.P).AddCssClasses("user-article")
+
+                        .SanitizeAndAddText("<script>alert('Hello!'); //comment </script> <b>bold</b> Lorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaa")//(°ー°〃)
+
+                    .Close()
+                .Close()
+
                 .Open(HtmlTag.Ul)
                     .AddCssClasses("nav", "nav-tabs")
                     .WithId("myTab")
@@ -205,7 +213,6 @@ namespace HtmxDotnet.BuilderViews
                                 .AddText("Search suggestions")
                             .Close(HtmlTag.Label)
                         .RenderBuilderView(typeAheadView, htmxConfigColor)
-                        //.AddText("<!-- Add TypeAhead for Favorite Color here -->") // Placeholder for partial view
                         .Close(HtmlTag.Div)
                     .Close(HtmlTag.Div)
 
