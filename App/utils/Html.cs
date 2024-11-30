@@ -1,9 +1,38 @@
 using System.Collections.Concurrent;
 using System.Text;
 using HtmxDotnet.BuilderViews;
+using Microsoft.Extensions.ObjectPool;
 
 namespace HtmxDotnet.utils
 {
+    internal class HtmlStringBuilderPolicy : PooledObjectPolicy<StringBuilder>
+    {
+        private readonly int _initialCap;
+        private readonly int _maxCap;
+        public HtmlStringBuilderPolicy(int initialCap, int maxCap)
+        {
+            this._maxCap = maxCap;
+            this._initialCap = initialCap;
+        }
+
+        public override StringBuilder Create()
+        {
+            return new StringBuilder(_initialCap);
+        }
+
+        public override bool Return(StringBuilder sb)
+        {
+            if (sb.Capacity > _maxCap)
+            {
+                return false;
+            }
+
+            sb.Clear();
+
+            return true;
+        }
+    }
+
     internal class HtmlNode
     {
         public HtmlTag Tag { get; set; }
@@ -24,8 +53,8 @@ namespace HtmxDotnet.utils
     {
         private readonly Stack<HtmlNode> _nodeStack = new();
         private readonly HtmlNode _rootNode;
-        private static readonly ThreadLocal<StringBuilder> ThreadLocalSanitizationStringBuilder = new();
-        // Open a new tag and add it to the stack
+        private static readonly DefaultObjectPool<StringBuilder> _htmlSbPool = new DefaultObjectPool<StringBuilder>(new HtmlStringBuilderPolicy(64, 1024));
+        private bool _isBuilt = false;
 
         public HtmlBuilder(HtmlTag rootTag = HtmlTag.Div)
         {
@@ -33,8 +62,17 @@ namespace HtmxDotnet.utils
             _nodeStack.Push(_rootNode);
         }
 
+        private void EnsureNotBuilt()
+        {
+            if (_isBuilt)
+            {
+                throw new InvalidOperationException("The builder cannot be used after Build has been called.");
+            }
+        }
+
         public HtmlBuilder Open(HtmlTag tag)
         {
+            EnsureNotBuilt();
             var newNode = new HtmlNode(tag);
             var parent = _nodeStack.Peek();
             getNodeChildren(parent).Add((newNode, parent.CurrentTextContentIndex));
@@ -46,6 +84,7 @@ namespace HtmxDotnet.utils
         // Close the current tag and pop the stack
         public HtmlBuilder Close(HtmlTag tag)
         {
+            EnsureNotBuilt();
             if (_nodeStack.Count <= 1)
             {
                 return this;
@@ -68,6 +107,8 @@ namespace HtmxDotnet.utils
 
         public HtmlBuilder Close()
         {
+            EnsureNotBuilt();
+
             if (_nodeStack.Count <= 1)
             {
                 return this;
@@ -81,6 +122,7 @@ namespace HtmxDotnet.utils
         // Add arbitrary attributes
         public HtmlBuilder AddAttributes(params (string name, string value)[] attributes)
         {
+            EnsureNotBuilt();
             var curNodeAttrs = getNodeAttributes(_nodeStack.Peek());
             foreach (var (name, value) in attributes)
             {
@@ -99,6 +141,8 @@ namespace HtmxDotnet.utils
         // Add CSS classes
         public HtmlBuilder AddCssClasses(params string[] cssClasses)
         {
+            EnsureNotBuilt();
+
             var curNodeCssClasses = getNodeCssClasses(_nodeStack.Peek());
             foreach (var cssClass in cssClasses)
             {
@@ -111,6 +155,8 @@ namespace HtmxDotnet.utils
         // Set the ID attribute
         public HtmlBuilder WithId(string id)
         {
+            EnsureNotBuilt();
+
             getNodeAttributes(_nodeStack.Peek()).Add("id", id);
 
             return this;
@@ -119,6 +165,8 @@ namespace HtmxDotnet.utils
         // Add data-* attributes
         public HtmlBuilder AddDataAttributes(params (string, string)[] dataAttributes)
         {
+            EnsureNotBuilt();
+
             var curNodeDataAttrs = getNodeAttributes(_nodeStack.Peek());
 
             foreach (var (key, value) in dataAttributes)
@@ -132,6 +180,7 @@ namespace HtmxDotnet.utils
         // Add text to the current node
         public HtmlBuilder AddText(string text)
         {
+            EnsureNotBuilt();
             var node = _nodeStack.Peek();
             var nodeText = getNodeText(node);
             nodeText.Append(text);
@@ -141,13 +190,14 @@ namespace HtmxDotnet.utils
 
         public HtmlBuilder SanitizeAndAddText(string text)
         {
+            EnsureNotBuilt();
             AddText(SanitizeText(text));
             return this;
         }
 
-
         public HtmlBuilder RenderBuilderView<VT>(IBuilderView<VT> bv, VT model)
         {
+            EnsureNotBuilt();
             bv.RenderHtml(this, model);
             return this;
         }
@@ -155,10 +205,15 @@ namespace HtmxDotnet.utils
         // Build the final HTML string
         public string Build()
         {
-            var stringBuilder = new StringBuilder();
+            EnsureNotBuilt();
+            var stringBuilder = _htmlSbPool.Get();
             BuildNode(_rootNode, stringBuilder);
 
-            return stringBuilder.ToString();
+            var text = stringBuilder.ToString();
+
+            _htmlSbPool.Return(stringBuilder);
+
+            return text;
         }
 
         private StringBuilder getNodeText(HtmlNode node)
@@ -168,7 +223,7 @@ namespace HtmxDotnet.utils
                 return node.Text;
             }
 
-            var sb = new StringBuilder();
+            var sb = _htmlSbPool.Get();
             node.Text = sb;
 
             return sb;
@@ -266,6 +321,7 @@ namespace HtmxDotnet.utils
                             sb.Append(tSpan[lastPosition..position]);
                         }
                     }
+
                     BuildNode(child, sb);
                     lastPosition = position;
                 }
@@ -286,66 +342,66 @@ namespace HtmxDotnet.utils
             {
                 sb.Append("</").Append(nodeTagText).Append('>');
             }
+
+            if (node.Text != null)
+            {
+                _htmlSbPool.Return(node.Text);
+            }
         }
 
         public static string SanitizeText(ReadOnlySpan<char> text)
         {
-            var sb = ThreadLocalSanitizationStringBuilder.Value;
-
-            if (sb == null)
-            {
-                sb = new StringBuilder();
-                ThreadLocalSanitizationStringBuilder.Value = sb;
-            }
+            var sb = _htmlSbPool.Get();
 
             for (var i = 0; i < text.Length; i++)
             {
-                switch (text[i])
+                char c = text[i];
+                int ascii = c;
+
+                if ((ascii & ~0x7F) != 0) // Check if the character is non-ASCII
                 {
-                    case '<':
+                    sb.Append(c);
+                    continue;
+                }
+
+                switch (ascii)
+                {
+                    case '<': // ASCII 0x3C
                         sb.Append("&lt;");
                         break;
-                    case '>':
+                    case '>': // ASCII 0x3E
                         sb.Append("&gt;");
                         break;
-                    case '&':
+                    case '&': // ASCII 0x26
                         sb.Append("&amp;");
                         break;
-                    case '"':
+                    case '"': // ASCII 0x22
                         sb.Append("&quot;");
                         break;
-                    case '\'':
+                    case '\'': // ASCII 0x27
                         sb.Append("&#39;");
                         break;
-                    case '/':   // Optional: Prevent closing script tags like </script>
+                    case '/': // ASCII 0x2F
                         sb.Append("&#47;");
                         break;
-
-                    case '\\':
+                    case '\\': // ASCII 0x5C
                         sb.Append("\\\\");
                         break;
-                    case '\n':
+                    case '\n': // ASCII 0x0A
                         sb.Append("\\n");
                         break;
-                    case '\r':
+                    case '\r': // ASCII 0x0D
                         sb.Append("\\r");
                         break;
-
                     default:
-                        sb.Append(text[i]);
+                        sb.Append(c);
                         break;
                 }
             }
 
             var sanitizedText = sb.ToString();
 
-            if (sb.Capacity > 256)
-            {
-                ThreadLocalSanitizationStringBuilder.Value = new StringBuilder();
-                return sanitizedText;
-            }
-
-            sb.Clear();
+            _htmlSbPool.Return(sb);
             return sanitizedText;
         }
     }
@@ -519,5 +575,4 @@ namespace HtmxDotnet.utils
         Template,
         Noscript
     }
-
 }
