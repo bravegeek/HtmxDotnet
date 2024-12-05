@@ -52,3 +52,5 @@ export function InitMutiTabForm(){
     const foodSuggestionDiv = document.getElementById('resultsFood');
     foodSuggestionDiv.addEventListener('click', handleFoodSuggestionClick);
 }
+
+//InitMutiTabForm();

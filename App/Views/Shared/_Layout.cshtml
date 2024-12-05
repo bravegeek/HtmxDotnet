@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="~/dist/css/site.css" asp-append-version="true" />
 </head>
 
-<body>
+<body class="bg-dark text-light">
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
             <div class="container-fluid">
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HtmxDotnet</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
@@ -21,33 +21,46 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link text-light" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="KitchenSink"
-                                asp-action="index">KicthenSink</a>
+                            <a class="nav-link text-light" asp-area="" asp-controller="KitchenSink" asp-action="Index">
+                                Kitchen Sink
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home"
-                                asp-action="Privacy">Privacy</a>
+                            <a class="nav-link text-light" asp-area="" asp-controller="Game" asp-action="Index">Game</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-controller="Account" asp-action="Index">
+                                Account
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-controller="FSM" asp-action="Index">
+                                FSM
+                            </a>
                         </li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
+    <div class="container bg-dark text-light p-4 rounded">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
+    <footer class="border-top footer bg-dark text-light mt-3">
         <div class="container">
-            &copy; 2024 - HtmxDotnet - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2024 - HtmxDotnet - <a class="text-light" asp-area="" asp-controller="Home" asp-action="Privacy">
+                Privacy
+            </a>
         </div>
     </footer>
-    <script src="~/dist/js/site/app.js"></script>
+    <script src="~/dist/js/site.js"></script>
+    <script src="~/dist/js/bootstrap.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 

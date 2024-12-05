@@ -1,5 +1,6 @@
 ﻿import htmx from "htmx.org";
 import { InitMutiTabForm } from "./components/multiTabForm";
+import { InitGamePage } from "./pages/game";
 
 /**
  * Creates a debounced function that delays invoking the provided function
@@ -28,5 +29,17 @@ function debounce(func, wait) {
     };
 }
 
+document.addEventListener("DOMContentLoaded", function () {
+    const location = window.location;
+    // Check if the URL indicates we're on the "game" page
+    if (location.pathname.match('/Game')) {
+        // Call the InitPage function to initialize the game page
+        InitGamePage();
+    }
 
-InitMutiTabForm();
+    if(location.pathname.match('/KitchenSink'))
+    {
+        InitMutiTabForm();
+    }
+});
+

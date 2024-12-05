@@ -36,6 +36,7 @@ namespace HtmxDotnet.utils
     internal class HtmlNode
     {
         public HtmlTag Tag { get; set; }
+        public bool IsRoot { get; set; } = false;
         public Dictionary<string, string>? Attributes { get; set; }
         public HashSet<string>? CssClasses { get; set; }
         public StringBuilder? Text { get; set; }
@@ -53,12 +54,15 @@ namespace HtmxDotnet.utils
     {
         private readonly Stack<HtmlNode> _nodeStack = new();
         private readonly HtmlNode _rootNode;
-        private static readonly DefaultObjectPool<StringBuilder> _htmlSbPool = new DefaultObjectPool<StringBuilder>(new HtmlStringBuilderPolicy(64, 1024));
+        private static readonly DefaultObjectPool<StringBuilder> _htmlSbPool = new DefaultObjectPool<StringBuilder>(new HtmlStringBuilderPolicy(64, 1024), 100);
         private bool _isBuilt = false;
 
         public HtmlBuilder(HtmlTag rootTag = HtmlTag.Div)
         {
-            _rootNode = new HtmlNode(rootTag);
+            _rootNode = new HtmlNode(rootTag)
+            {
+                IsRoot = true
+            };
             _nodeStack.Push(_rootNode);
         }
 
@@ -210,10 +214,26 @@ namespace HtmxDotnet.utils
             BuildNode(_rootNode, stringBuilder);
 
             var text = stringBuilder.ToString();
-
-            _htmlSbPool.Return(stringBuilder);
+            release(_rootNode);
+            //_htmlSbPool.Return(stringBuilder);
 
             return text;
+        }
+
+        private void release(HtmlNode node)
+        {
+            if (node.Children != null && node.Children.Count > 0)
+            {
+                node.Children.ForEach(c =>
+                {
+                    release(c.Node);
+                });
+            }
+
+            if (node.Text != null)
+            {
+                _htmlSbPool.Return(node.Text);
+            }
         }
 
         private StringBuilder getNodeText(HtmlNode node)
@@ -273,7 +293,7 @@ namespace HtmxDotnet.utils
         {
             var nodeText = node.Text?.GetChunks();
             var nodeTag = node.Tag;
-            var nodeTagText = node.Tag.ToTagName();
+            var nodeTagText = nodeTag.ToTagName();
             var nodeChildren = node.Children;
             var nodeAttrs = node.Attributes;
             var nodeCssClasses = node.CssClasses;
@@ -341,11 +361,6 @@ namespace HtmxDotnet.utils
             if (!nodeTag.IsSelfClosing())
             {
                 sb.Append("</").Append(nodeTagText).Append('>');
-            }
-
-            if (node.Text != null)
-            {
-                _htmlSbPool.Return(node.Text);
             }
         }
 
