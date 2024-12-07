@@ -2,9 +2,13 @@
 @model MultiTabFormViewModel
 
 @{
-    var hb = new HtmxDotnet.utils.HtmlBuilder();
-    var view = new MultiTabFormBV();
-    var html = view.RenderHtml(hb, Model).Build();
+    var html = "";
+    using (var hb = new HtmxDotnet.utils.HtmlBuilder())
+    {
+        var view = new MultiTabFormBV();
+        html = view.RenderHtml(hb, Model).Build();
+    };
+
 }
 
 <br>

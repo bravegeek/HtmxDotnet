@@ -5,42 +5,47 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace HtmxDotnet.utils
 {
-    internal class HtmlNodePoolPolicy : PooledObjectPolicy<HtmlNode>
+    internal class HtmlNodePool
     {
-        private HtmlTag _htmlTag = HtmlTag.Div;
+        private readonly ConcurrentQueue<HtmlNode> _pool = new();
+        private readonly HashSet<HtmlNode> _activeNodes = [];
 
-        public override HtmlNode Create()
+        internal HtmlNode Get(HtmlTag tag)
         {
-            // Create a new HtmlNode (you can optionally set a default tag here)
-            return new HtmlNode(_htmlTag);
-        }
+            var node = _pool.TryDequeue(out var newNode) ? newNode.ResetAndReturn(tag) : new HtmlNode(tag);
 
-        public override bool Return(HtmlNode node)
-        {
-            // Reset the node to its default state before returning to the pool.
-            // Clean up or clear any properties of the node that should be reset.
-
-            // Example: Reset children, attributes, and text content
-            if (node.IsAttributesInitialized)
+            // Mark the node as active
+            lock (_activeNodes)
             {
-                node.LazyAttributes.Clear();
+                _activeNodes.Add(node);
             }
 
-            if (node.IsCssClassesInitialized)
-            {
-                node.LazyCssClasses.Clear();
-            }
-
-            if (node.IsTextInitialized)
-                node.Text.Clear();
-            node.LazyChildren.Clear();
-
-            return true; // Return true to indicate the object was successfully reset
+            return node;
         }
 
-        public void SetDefaultTag(HtmlTag tag)
+        internal void MarkForRelease(HtmlNode node)
         {
-            this._htmlTag = tag;
+            lock (_activeNodes)
+            {
+                if (_activeNodes.Contains(node))
+                {
+                    _activeNodes.Remove(node);
+                    _pool.Enqueue(node);
+                }
+            }
+        }
+
+        internal void ReleaseAll()
+        {
+            lock (_activeNodes)
+            {
+                foreach (var node in _activeNodes)
+                {
+                    _pool.Enqueue(node);
+                }
+
+                _activeNodes.Clear();
+            }
         }
     }
 
@@ -72,29 +77,46 @@ namespace HtmxDotnet.utils
         }
     }
 
-    internal class HtmlNode : IDisposable
+    internal class HtmlNode
     {
         private Dictionary<string, string>? _attributes;
         private HashSet<string>? _cssClasses;
         private StringBuilder? _text;
         private List<(HtmlNode Node, int Position)>? _children;
 
-        public bool IsChildrenInitilized { get; private set; } = false;
-        public bool IsAttributesInitialized { get; private set; } = false;
-        public bool IsCssClassesInitialized { get; private set; } = false;
-        public bool IsTextInitialized { get; private set; } = false;
+        internal bool IsChildrenInitilizedWithValues => _children != null && _children.Count > 0;
+        internal bool IsAttributesInitializedWithValues => _attributes != null && _attributes.Count > 0;
+        internal bool IsCssClassesInitializedWithValues => _cssClasses != null && _cssClasses.Count > 0;
+        internal bool IsTextInitializedWithValue => _text != null && _text.Length > 0;
 
-        public bool IsChildrenInitilizedWithValues => IsChildrenInitilized && _children!.Count > 0;
-        public bool IsAttributesInitializedWithValues => IsAttributesInitialized && _attributes!.Count > 0;
-        public bool IsCssClassesInitializedWithValues => IsCssClassesInitialized && _cssClasses!.Count > 0;
-        public bool IsTextInitializedWithValue => IsTextInitialized && _text!.Length > 0;
+        internal HtmlTag Tag { get; set; }
+        internal int CurrentTextContentIndex { get; set; } = 0;
 
-        public HtmlTag Tag { get; set; }
-        public int CurrentTextContentIndex { get; set; } = 0;
-
-        public HtmlNode(HtmlTag tag = HtmlTag.Div)
+        internal HtmlNode(HtmlTag tag = HtmlTag.Div)
         {
             Tag = tag;
+        }
+
+        internal HtmlNode ResetAndReturn(HtmlTag tag)
+        {
+            Tag = tag;
+
+            _attributes?.Clear();
+
+            _cssClasses?.Clear();
+
+            if (_text?.Length > 128)
+            {
+                _text = null;
+            }
+            else
+            {
+                _text?.Clear();
+            };
+
+            _children?.Clear();
+
+            return this;
         }
 
         public List<(HtmlNode Node, int Position)> LazyChildren
@@ -106,7 +128,6 @@ namespace HtmxDotnet.utils
                     return _children;
                 }
                 _children = new();
-                IsChildrenInitilized = true;
                 return _children;
             }
         }
@@ -120,7 +141,6 @@ namespace HtmxDotnet.utils
                     return _attributes;
                 }
                 _attributes = new();
-                IsAttributesInitialized = true;
                 return _attributes;
 
             }
@@ -135,12 +155,11 @@ namespace HtmxDotnet.utils
                     return _cssClasses;
                 }
                 _cssClasses = new();
-                IsCssClassesInitialized = true;
                 return _cssClasses;
             }
         }
 
-        public StringBuilder Text
+        public StringBuilder LazyText
         {
             get
             {
@@ -148,24 +167,18 @@ namespace HtmxDotnet.utils
                 {
                     return _text;
                 }
-                _text = HtmlPools.HtmlSbPool.Get();
-                IsTextInitialized = true;
-                return _text;
-            }
-        }
 
-        public void Dispose()
-        {
-            if (_text != null)
-            {
-                HtmlPools.HtmlSbPool.Return(_text);
+                _text = new(64);//HtmlPools.HtmlSbPool.Get();
+
+                return _text;
             }
         }
     }
 
     internal static class HtmlPools
     {
-        public static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new DefaultObjectPool<StringBuilder>(new HtmlStringBuilderPolicy(32, 1024), 100);
+        public static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new(new HtmlStringBuilderPolicy(32, 2048), 10);
+        public static readonly HtmlNodePool HtmlNodePool = new();
     }
 
 
@@ -176,14 +189,14 @@ namespace HtmxDotnet.utils
 
         public HtmlBuilder(HtmlTag rootTag = HtmlTag.Div)
         {
-            _rootNode = new HtmlNode(rootTag);
+            _rootNode = HtmlPools.HtmlNodePool.Get(rootTag); //new HtmlNode(rootTag);
 
             _nodeStack.Push(_rootNode);
         }
 
         public HtmlBuilder Open(HtmlTag tag)
         {
-            var newNode = new HtmlNode(tag);
+            var newNode = HtmlPools.HtmlNodePool.Get(tag);  //new HtmlNode(tag);
 
             var parent = _nodeStack.Peek();
 
@@ -295,7 +308,7 @@ namespace HtmxDotnet.utils
         {
             var node = _nodeStack.Peek();
 
-            var nodeText = node.Text;
+            var nodeText = node.LazyText;
 
             nodeText.Append(text);
 
@@ -334,27 +347,24 @@ namespace HtmxDotnet.utils
 
         private static void Release(HtmlNode node)
         {
-            if (node.IsChildrenInitilized)
+            if (node.IsChildrenInitilizedWithValues)
             {
-                node.LazyChildren.ForEach(c =>
-                {
-                    Release(c.Node);
-                });
+                node.LazyChildren.ForEach(c => Release(c.Node));
             }
 
-            if (node.IsTextInitialized)
-            {
-                HtmlPools.HtmlSbPool.Return(node.Text);
-            }
+            HtmlPools.HtmlNodePool.MarkForRelease(node);
+
+            return;
+
         }
 
         // Recursively build the node and its children
         private static void BuildNode(HtmlNode node, StringBuilder sb)
         {
-            var nodeTextIntilized = node.IsTextInitialized;
-            var nodeCssInitilized = node.IsCssClassesInitialized;
-            var nodeAttrsInitilized = node.IsAttributesInitialized;
-            var nodeChildrenInitilized = node.IsChildrenInitilized;
+            var nodeTextIntilized = node.IsTextInitializedWithValue;
+            var nodeCssInitilized = node.IsCssClassesInitializedWithValues;
+            var nodeAttrsInitilized = node.IsAttributesInitializedWithValues;
+            var nodeChildrenInitilized = node.IsChildrenInitilizedWithValues;
             var nodeTag = node.Tag;
             var nodeTagText = nodeTag.ToTagName();
 
@@ -401,7 +411,7 @@ namespace HtmxDotnet.utils
                 {
                     if (nodeTextIntilized)
                     {
-                        var nodeText = node.Text.GetChunks();
+                        var nodeText = node.LazyText.GetChunks();
 
                         foreach (var chunk in nodeText)
                         {
@@ -419,7 +429,7 @@ namespace HtmxDotnet.utils
             // Add remaining text after the last child
             if (nodeTextIntilized)
             {
-                var nodeText = node.Text.GetChunks();
+                var nodeText = node.LazyText.GetChunks();
 
                 foreach (var chunk in nodeText)
                 {
@@ -499,6 +509,7 @@ namespace HtmxDotnet.utils
         public void Dispose()
         {
             Release(this._rootNode);
+            HtmlPools.HtmlNodePool.ReleaseAll();
         }
     }
 
