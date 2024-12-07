@@ -5,6 +5,45 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace HtmxDotnet.utils
 {
+    internal class HtmlNodePoolPolicy : PooledObjectPolicy<HtmlNode>
+    {
+        private HtmlTag _htmlTag = HtmlTag.Div;
+
+        public override HtmlNode Create()
+        {
+            // Create a new HtmlNode (you can optionally set a default tag here)
+            return new HtmlNode(_htmlTag);
+        }
+
+        public override bool Return(HtmlNode node)
+        {
+            // Reset the node to its default state before returning to the pool.
+            // Clean up or clear any properties of the node that should be reset.
+
+            // Example: Reset children, attributes, and text content
+            if (node.IsAttributesInitialized)
+            {
+                node.LazyAttributes.Clear();
+            }
+
+            if (node.IsCssClassesInitialized)
+            {
+                node.LazyCssClasses.Clear();
+            }
+
+            if (node.IsTextInitialized)
+                node.Text.Clear();
+            node.LazyChildren.Clear();
+
+            return true; // Return true to indicate the object was successfully reset
+        }
+
+        public void SetDefaultTag(HtmlTag tag)
+        {
+            this._htmlTag = tag;
+        }
+    }
+
     internal class HtmlStringBuilderPolicy : PooledObjectPolicy<StringBuilder>
     {
         private readonly int _initialCap;
@@ -33,53 +72,123 @@ namespace HtmxDotnet.utils
         }
     }
 
-    internal class HtmlNode
+    internal class HtmlNode : IDisposable
     {
-        public HtmlTag Tag { get; set; }
-        public bool IsRoot { get; set; } = false;
-        public Dictionary<string, string>? Attributes { get; set; }
-        public HashSet<string>? CssClasses { get; set; }
-        public StringBuilder? Text { get; set; }
-        public int CurrentTextContentIndex { get; set; } = 0;
-        public List<(HtmlNode Node, int Position)>? Children { get; set; }
+        private Dictionary<string, string>? _attributes;
+        private HashSet<string>? _cssClasses;
+        private StringBuilder? _text;
+        private List<(HtmlNode Node, int Position)>? _children;
 
-        public HtmlNode(HtmlTag tag)
+        public bool IsChildrenInitilized { get; private set; } = false;
+        public bool IsAttributesInitialized { get; private set; } = false;
+        public bool IsCssClassesInitialized { get; private set; } = false;
+        public bool IsTextInitialized { get; private set; } = false;
+
+        public bool IsChildrenInitilizedWithValues => IsChildrenInitilized && _children!.Count > 0;
+        public bool IsAttributesInitializedWithValues => IsAttributesInitialized && _attributes!.Count > 0;
+        public bool IsCssClassesInitializedWithValues => IsCssClassesInitialized && _cssClasses!.Count > 0;
+        public bool IsTextInitializedWithValue => IsTextInitialized && _text!.Length > 0;
+
+        public HtmlTag Tag { get; set; }
+        public int CurrentTextContentIndex { get; set; } = 0;
+
+        public HtmlNode(HtmlTag tag = HtmlTag.Div)
         {
             Tag = tag;
         }
+
+        public List<(HtmlNode Node, int Position)> LazyChildren
+        {
+            get
+            {
+                if (_children != null)
+                {
+                    return _children;
+                }
+                _children = new();
+                IsChildrenInitilized = true;
+                return _children;
+            }
+        }
+
+        public Dictionary<string, string> LazyAttributes
+        {
+            get
+            {
+                if (_attributes != null)
+                {
+                    return _attributes;
+                }
+                _attributes = new();
+                IsAttributesInitialized = true;
+                return _attributes;
+
+            }
+        }
+
+        public HashSet<string> LazyCssClasses
+        {
+            get
+            {
+                if (_cssClasses != null)
+                {
+                    return _cssClasses;
+                }
+                _cssClasses = new();
+                IsCssClassesInitialized = true;
+                return _cssClasses;
+            }
+        }
+
+        public StringBuilder Text
+        {
+            get
+            {
+                if (_text != null)
+                {
+                    return _text;
+                }
+                _text = HtmlPools.HtmlSbPool.Get();
+                IsTextInitialized = true;
+                return _text;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_text != null)
+            {
+                HtmlPools.HtmlSbPool.Return(_text);
+            }
+        }
+    }
+
+    internal static class HtmlPools
+    {
+        public static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new DefaultObjectPool<StringBuilder>(new HtmlStringBuilderPolicy(32, 1024), 100);
     }
 
 
-    public class HtmlBuilder
+    public class HtmlBuilder : IDisposable
     {
         private readonly Stack<HtmlNode> _nodeStack = new();
         private readonly HtmlNode _rootNode;
-        private static readonly DefaultObjectPool<StringBuilder> _htmlSbPool = new DefaultObjectPool<StringBuilder>(new HtmlStringBuilderPolicy(64, 1024), 100);
-        private bool _isBuilt = false;
 
         public HtmlBuilder(HtmlTag rootTag = HtmlTag.Div)
         {
-            _rootNode = new HtmlNode(rootTag)
-            {
-                IsRoot = true
-            };
-            _nodeStack.Push(_rootNode);
-        }
+            _rootNode = new HtmlNode(rootTag);
 
-        private void EnsureNotBuilt()
-        {
-            if (_isBuilt)
-            {
-                throw new InvalidOperationException("The builder cannot be used after Build has been called.");
-            }
+            _nodeStack.Push(_rootNode);
         }
 
         public HtmlBuilder Open(HtmlTag tag)
         {
-            EnsureNotBuilt();
             var newNode = new HtmlNode(tag);
+
             var parent = _nodeStack.Peek();
-            getNodeChildren(parent).Add((newNode, parent.CurrentTextContentIndex));
+
+            parent.LazyChildren.Add((newNode, parent.CurrentTextContentIndex));
+
             _nodeStack.Push(newNode);
 
             return this;
@@ -88,7 +197,6 @@ namespace HtmxDotnet.utils
         // Close the current tag and pop the stack
         public HtmlBuilder Close(HtmlTag tag)
         {
-            EnsureNotBuilt();
             if (_nodeStack.Count <= 1)
             {
                 return this;
@@ -111,8 +219,6 @@ namespace HtmxDotnet.utils
 
         public HtmlBuilder Close()
         {
-            EnsureNotBuilt();
-
             if (_nodeStack.Count <= 1)
             {
                 return this;
@@ -126,11 +232,17 @@ namespace HtmxDotnet.utils
         // Add arbitrary attributes
         public HtmlBuilder AddAttributes(params (string name, string value)[] attributes)
         {
-            EnsureNotBuilt();
-            var curNodeAttrs = getNodeAttributes(_nodeStack.Peek());
-            foreach (var (name, value) in attributes)
+            var curNodeAttrs = _nodeStack.Peek().LazyAttributes;
+
+            Span<(string name, string value)> attributeSpan = attributes;
+
+            for (var i = 0; i < attributeSpan.Length; i++)
             {
-                if (name == "class" && !string.IsNullOrEmpty(value))
+                var attr = attributeSpan[i];
+                var name = attr.name;
+                var value = attr.value;
+
+                if (name.Length == 5 && name.Equals("class", StringComparison.Ordinal))
                 {
                     AddCssClasses(value.Split(' ')); // Intercept CSS classes
                     continue;
@@ -145,12 +257,13 @@ namespace HtmxDotnet.utils
         // Add CSS classes
         public HtmlBuilder AddCssClasses(params string[] cssClasses)
         {
-            EnsureNotBuilt();
+            var curNodeCssClasses = _nodeStack.Peek().LazyCssClasses;
 
-            var curNodeCssClasses = getNodeCssClasses(_nodeStack.Peek());
-            foreach (var cssClass in cssClasses)
+            Span<string> cssClassSpan = cssClasses;
+
+            for (var i = 0; i < cssClassSpan.Length; i++)
             {
-                curNodeCssClasses.Add(cssClass);
+                curNodeCssClasses.Add(cssClassSpan[i]);
             }
 
             return this;
@@ -159,9 +272,7 @@ namespace HtmxDotnet.utils
         // Set the ID attribute
         public HtmlBuilder WithId(string id)
         {
-            EnsureNotBuilt();
-
-            getNodeAttributes(_nodeStack.Peek()).Add("id", id);
+            _nodeStack.Peek().LazyAttributes.Add("id", id);
 
             return this;
         }
@@ -169,9 +280,7 @@ namespace HtmxDotnet.utils
         // Add data-* attributes
         public HtmlBuilder AddDataAttributes(params (string, string)[] dataAttributes)
         {
-            EnsureNotBuilt();
-
-            var curNodeDataAttrs = getNodeAttributes(_nodeStack.Peek());
+            var curNodeDataAttrs = _nodeStack.Peek().LazyAttributes;
 
             foreach (var (key, value) in dataAttributes)
             {
@@ -184,126 +293,79 @@ namespace HtmxDotnet.utils
         // Add text to the current node
         public HtmlBuilder AddText(string text)
         {
-            EnsureNotBuilt();
             var node = _nodeStack.Peek();
-            var nodeText = getNodeText(node);
+
+            var nodeText = node.Text;
+
             nodeText.Append(text);
+
             node.CurrentTextContentIndex = nodeText.Length;
+
             return this;
         }
 
         public HtmlBuilder SanitizeAndAddText(string text)
         {
-            EnsureNotBuilt();
             AddText(SanitizeText(text));
+
             return this;
         }
 
         public HtmlBuilder RenderBuilderView<VT>(IBuilderView<VT> bv, VT model)
         {
-            EnsureNotBuilt();
             bv.RenderHtml(this, model);
+
             return this;
         }
 
         // Build the final HTML string
         public string Build()
         {
-            EnsureNotBuilt();
-            var stringBuilder = _htmlSbPool.Get();
+            var stringBuilder = HtmlPools.HtmlSbPool.Get();
+
             BuildNode(_rootNode, stringBuilder);
 
             var text = stringBuilder.ToString();
-            release(_rootNode);
-            //_htmlSbPool.Return(stringBuilder);
+
+            HtmlPools.HtmlSbPool.Return(stringBuilder);
 
             return text;
         }
 
-        private void release(HtmlNode node)
+        private static void Release(HtmlNode node)
         {
-            if (node.Children != null && node.Children.Count > 0)
+            if (node.IsChildrenInitilized)
             {
-                node.Children.ForEach(c =>
+                node.LazyChildren.ForEach(c =>
                 {
-                    release(c.Node);
+                    Release(c.Node);
                 });
             }
 
-            if (node.Text != null)
+            if (node.IsTextInitialized)
             {
-                _htmlSbPool.Return(node.Text);
+                HtmlPools.HtmlSbPool.Return(node.Text);
             }
-        }
-
-        private StringBuilder getNodeText(HtmlNode node)
-        {
-            if (node.Text != null)
-            {
-                return node.Text;
-            }
-
-            var sb = _htmlSbPool.Get();
-            node.Text = sb;
-
-            return sb;
-        }
-
-        private Dictionary<string, string> getNodeAttributes(HtmlNode node)
-        {
-            if (node.Attributes != null)
-            {
-                return node.Attributes;
-            }
-
-            var dic = new Dictionary<string, string>();
-            node.Attributes = dic;
-
-            return dic;
-        }
-
-        private HashSet<string> getNodeCssClasses(HtmlNode node)
-        {
-            if (node.CssClasses != null)
-            {
-                return node.CssClasses;
-            }
-
-            var hs = new HashSet<string>();
-            node.CssClasses = hs;
-
-            return hs;
-        }
-
-        private List<(HtmlNode Node, int Postion)> getNodeChildren(HtmlNode node)
-        {
-            if (node.Children != null)
-            {
-                return node.Children;
-            }
-
-            var children = new List<(HtmlNode Node, int Position)>();
-            node.Children = children;
-
-            return children;
         }
 
         // Recursively build the node and its children
         private static void BuildNode(HtmlNode node, StringBuilder sb)
         {
-            var nodeText = node.Text?.GetChunks();
+            var nodeTextIntilized = node.IsTextInitialized;
+            var nodeCssInitilized = node.IsCssClassesInitialized;
+            var nodeAttrsInitilized = node.IsAttributesInitialized;
+            var nodeChildrenInitilized = node.IsChildrenInitilized;
             var nodeTag = node.Tag;
             var nodeTagText = nodeTag.ToTagName();
-            var nodeChildren = node.Children;
-            var nodeAttrs = node.Attributes;
-            var nodeCssClasses = node.CssClasses;
 
             // Open tag
             sb.Append('<').Append(nodeTagText);
 
             // Add CSS classes if present
-            if (nodeCssClasses != null && nodeCssClasses.Count > 0)
+            if (nodeCssInitilized)
             {
+                var nodeCssClasses = node.LazyCssClasses;
+
                 sb.Append(" class=\"");
 
                 foreach (var cssClass in nodeCssClasses)
@@ -315,8 +377,10 @@ namespace HtmxDotnet.utils
             }
 
             // Add attributes
-            if (nodeAttrs != null)
+            if (nodeAttrsInitilized)
             {
+                var nodeAttrs = node.LazyAttributes;
+
                 foreach (var (key, value) in nodeAttrs)
                 {
                     sb.Append(' ').Append(key).Append("=\"").Append(value).Append('"');
@@ -329,12 +393,16 @@ namespace HtmxDotnet.utils
 
             int lastPosition = 0;
 
-            if (nodeChildren != null)
+            if (nodeChildrenInitilized)
             {
+                var nodeChildren = node.LazyChildren;
+
                 foreach (var (child, position) in nodeChildren)
                 {
-                    if (nodeText != null)
+                    if (nodeTextIntilized)
                     {
+                        var nodeText = node.Text.GetChunks();
+
                         foreach (var chunk in nodeText)
                         {
                             var tSpan = chunk.Span;
@@ -343,13 +411,16 @@ namespace HtmxDotnet.utils
                     }
 
                     BuildNode(child, sb);
+
                     lastPosition = position;
                 }
             }
 
             // Add remaining text after the last child
-            if (nodeText != null)
+            if (nodeTextIntilized)
             {
+                var nodeText = node.Text.GetChunks();
+
                 foreach (var chunk in nodeText)
                 {
                     var tSpan = chunk.Span;
@@ -364,80 +435,92 @@ namespace HtmxDotnet.utils
             }
         }
 
-        public static string SanitizeText(ReadOnlySpan<char> text)
+        public static unsafe string SanitizeText(ReadOnlySpan<char> text)
         {
-            var sb = _htmlSbPool.Get();
+            var sb = HtmlPools.HtmlSbPool.Get();
 
-            for (var i = 0; i < text.Length; i++)
+            fixed (char* ptr = text)
             {
-                char c = text[i];
-                int ascii = c;
+                char* current = ptr;
+                char* end = ptr + text.Length;
 
-                if ((ascii & ~0x7F) != 0) // Check if the character is non-ASCII
+                while (current < end)
                 {
-                    sb.Append(c);
-                    continue;
-                }
+                    char c = *current++;
+                    int ascii = c;
 
-                switch (ascii)
-                {
-                    case '<': // ASCII 0x3C
-                        sb.Append("&lt;");
-                        break;
-                    case '>': // ASCII 0x3E
-                        sb.Append("&gt;");
-                        break;
-                    case '&': // ASCII 0x26
-                        sb.Append("&amp;");
-                        break;
-                    case '"': // ASCII 0x22
-                        sb.Append("&quot;");
-                        break;
-                    case '\'': // ASCII 0x27
-                        sb.Append("&#39;");
-                        break;
-                    case '/': // ASCII 0x2F
-                        sb.Append("&#47;");
-                        break;
-                    case '\\': // ASCII 0x5C
-                        sb.Append("\\\\");
-                        break;
-                    case '\n': // ASCII 0x0A
-                        sb.Append("\\n");
-                        break;
-                    case '\r': // ASCII 0x0D
-                        sb.Append("\\r");
-                        break;
-                    default:
+                    if ((ascii & ~0x7F) != 0) // Check if the character is non-ASCII
+                    {
                         sb.Append(c);
-                        break;
+                        continue;
+                    }
+
+                    switch (ascii)
+                    {
+                        case '<': // ASCII 0x3C
+                            sb.Append("&lt;");
+                            break;
+                        case '>': // ASCII 0x3E
+                            sb.Append("&gt;");
+                            break;
+                        case '&': // ASCII 0x26
+                            sb.Append("&amp;");
+                            break;
+                        case '"': // ASCII 0x22
+                            sb.Append("&quot;");
+                            break;
+                        case '\'': // ASCII 0x27
+                            sb.Append("&#39;");
+                            break;
+                        case '/': // ASCII 0x2F
+                            sb.Append("&#47;");
+                            break;
+                        case '\\': // ASCII 0x5C
+                            sb.Append("\\\\");
+                            break;
+                        case '\n': // ASCII 0x0A
+                            sb.Append("\\n");
+                            break;
+                        case '\r': // ASCII 0x0D
+                            sb.Append("\\r");
+                            break;
+                        default:
+                            sb.Append(c);
+                            break;
+                    }
                 }
             }
 
             var sanitizedText = sb.ToString();
-
-            _htmlSbPool.Return(sb);
+            HtmlPools.HtmlSbPool.Return(sb);
             return sanitizedText;
+        }
+
+        public void Dispose()
+        {
+            Release(this._rootNode);
         }
     }
 
     public static class HtmlTagEnumExtensions
     {
         private static readonly HtmlTag[] _selfClosingTags = [
-            HtmlTag.Meta,
             HtmlTag.Link,
-            HtmlTag.Base,
-            HtmlTag.Br,
-            HtmlTag.Wbr,
             HtmlTag.Img,
+            HtmlTag.Br,
+            HtmlTag.Hr,
+            HtmlTag.Wbr,
             HtmlTag.Embed,
+            HtmlTag.Meta,
+            HtmlTag.Area,
+            HtmlTag.Col,
+            HtmlTag.Base,
             HtmlTag.Param,
             HtmlTag.Source,
             HtmlTag.Track,
-            HtmlTag.Area,
-            HtmlTag.Col,
-            HtmlTag.Hr
+
         ];
+
         private static ConcurrentDictionary<HtmlTag, string> _tagNameFlyWeight = []; //Cache tag strings, save some memory!
 
         public static string ToTagName(this HtmlTag tag)
@@ -445,13 +528,16 @@ namespace HtmxDotnet.utils
             return _tagNameFlyWeight.GetOrAdd(tag, tag => tag.ToString().ToLower());
         }
 
-        public static bool IsSelfClosing(this HtmlTag tag)
+        public unsafe static bool IsSelfClosing(this HtmlTag tag)
         {
-            for (var i = 0; i < _selfClosingTags.Length; i++)
+            fixed (HtmlTag* tagsPtr = _selfClosingTags)  // Pin the array to a fixed location in memory
             {
-                if (_selfClosingTags[i] == tag)
+                for (var i = 0; i < _selfClosingTags.Length; i++)
                 {
-                    return true;
+                    if (*(tagsPtr + i) == tag)  // Access the tag directly through the pointer
+                    {
+                        return true;
+                    }
                 }
             }
 

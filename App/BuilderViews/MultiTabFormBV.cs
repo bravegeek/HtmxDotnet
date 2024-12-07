@@ -37,8 +37,30 @@ namespace HtmxDotnet.BuilderViews
                 .Open(HtmlTag.Div).AddCssClasses("user-input")
                     .Open(HtmlTag.P).AddCssClasses("user-article")
 
-                        .SanitizeAndAddText("<script>alert('Hello!'); //comment </script> <b>bold</b> Lorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaaLorum Ipsum yyyaaa")//(°ー°〃)
-
+                        .SanitizeAndAddText(@"
+                            <html>
+                                <script>
+                                    var str = 'Hello, world!'; // Sample string with special characters: < > & ' "" / \n \r
+                                    var dangerous = '<script>alert(""xss"")<\/script>';
+                                    var escaped = '&lt;div&gt;escaped&lt;/div&gt;';
+                                </script>
+                                <body>
+                                    <h1>Title</h1>
+                                    <p>This is a paragraph with <b>bold</b> text and a newline:\n</p>
+                                    <p>Special characters: <, >, &, ', ""</p>
+                                    <a href=""javascript:alert('XSS');"">Click me</a>
+                                </body>
+                            </html>
+                            <!-- This comment includes &, <, > -->
+                            <div>Nested <div>tags</div> are tricky.</div>
+                            <table>
+                                <tr><td>Row 1, Cell 1</td><td>Row 1, Cell 2</td></tr>
+                                <tr><td>Row 2, Cell 1</td><td>Row 2, Cell 2</td></tr>
+                            </table>
+                            <script>
+                                console.log('Characters: <, >, &, \""', ""\"", /, \\');
+                            </script>"
+                        )//(°ー°〃)
                     .Close()
                 .Close()
 

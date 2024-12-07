@@ -1,5 +1,3 @@
-import { debug } from 'console';
-
 const canvas = document.getElementById('fsmCanvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 const radius = 30;
@@ -46,8 +44,6 @@ class State {
       frameCount: 20,
       attributes: [],
     };
-    // this.data.id = id;
-    // this.data.name = name;
     this.x = x;
     this.y = y;
     this.connections = [];
@@ -124,7 +120,7 @@ function editMode(clickedState: State) {
   console.log(clickedState);
 }
 
-// Untils =============================================render();========
+// Untils ===============================================================
 
 function setDraggingFalse() {
   states.forEach((x) => (x.isBeingDragged = false));
