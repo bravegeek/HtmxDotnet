@@ -9,6 +9,12 @@ namespace HtmxDotnet.utils
     {
         private readonly ConcurrentQueue<HtmlNode> _pool = new();
         private readonly HashSet<HtmlNode> _activeNodes = [];
+        private readonly int _maxCapacity;
+
+        internal HtmlNodePool(int maxCap)
+        {
+            _maxCapacity = maxCap;
+        }
 
         internal HtmlNode Get(HtmlTag tag)
         {
@@ -27,9 +33,8 @@ namespace HtmxDotnet.utils
         {
             lock (_activeNodes)
             {
-                if (_activeNodes.Contains(node))
+                if (_activeNodes.Remove(node) && _pool.Count < _maxCapacity)
                 {
-                    _activeNodes.Remove(node);
                     _pool.Enqueue(node);
                 }
             }
@@ -78,17 +83,17 @@ namespace HtmxDotnet.utils
         }
     }
 
-    internal class HtmlNode
+    internal sealed class HtmlNode
     {
         private Dictionary<string, string>? _attributes;
         private HashSet<string>? _cssClasses;
         private StringBuilder? _text;
         private List<(HtmlNode Node, int Position)>? _children;
 
-        internal bool IsChildrenInitilizedWithValues => _children != null && _children.Count > 0;
-        internal bool IsAttributesInitializedWithValues => _attributes != null && _attributes.Count > 0;
-        internal bool IsCssClassesInitializedWithValues => _cssClasses != null && _cssClasses.Count > 0;
-        internal bool IsTextInitializedWithValue => _text != null && _text.Length > 0;
+        internal bool HasChildren => _children != null && _children.Count > 0;
+        internal bool HasAttributes => _attributes != null && _attributes.Count > 0;
+        internal bool HasCssClasses => _cssClasses != null && _cssClasses.Count > 0;
+        internal bool HasText => _text != null && _text.Length > 0;
 
         internal HtmlTag Tag { get; set; }
         internal int CurrentTextContentIndex { get; set; } = 0;
@@ -106,7 +111,7 @@ namespace HtmxDotnet.utils
             _cssClasses?.Clear();
             _children?.Clear();
 
-            if (_text?.Length > 128)
+            if (_text?.Length > 512)
             {
                 _text = null;
 
@@ -118,7 +123,7 @@ namespace HtmxDotnet.utils
             return this;
         }
 
-        public List<(HtmlNode Node, int Position)> LazyChildren
+        internal List<(HtmlNode Node, int Position)> LazyChildren
         {
             get
             {
@@ -133,7 +138,7 @@ namespace HtmxDotnet.utils
             }
         }
 
-        public Dictionary<string, string> LazyAttributes
+        internal Dictionary<string, string> LazyAttributes
         {
             get
             {
@@ -149,7 +154,7 @@ namespace HtmxDotnet.utils
             }
         }
 
-        public HashSet<string> LazyCssClasses
+        internal HashSet<string> LazyCssClasses
         {
             get
             {
@@ -164,7 +169,7 @@ namespace HtmxDotnet.utils
             }
         }
 
-        public StringBuilder LazyText
+        internal StringBuilder LazyText
         {
             get
             {
@@ -182,8 +187,8 @@ namespace HtmxDotnet.utils
 
     internal static class HtmlPools
     {
-        public static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new(new HtmlStringBuilderPolicy(32, 2048), 100);
-        public static readonly HtmlNodePool HtmlNodePool = new();
+        internal static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new(new HtmlStringBuilderPolicy(64, 10_000), 25);
+        internal static readonly HtmlNodePool HtmlNodePool = new(1000);
     }
 
 
@@ -322,127 +327,6 @@ namespace HtmxDotnet.utils
             return this;
         }
 
-        public HtmlBuilder RenderBuilderView<VT>(IBuilderView<VT> bv, VT model)
-        {
-            bv.RenderHtml(this, model);
-
-            return this;
-        }
-
-        // Build the final HTML string
-        public string Build()
-        {
-            var stringBuilder = HtmlPools.HtmlSbPool.Get();
-
-            BuildNode(_rootNode, stringBuilder);
-
-            var text = stringBuilder.ToString();
-
-            HtmlPools.HtmlSbPool.Return(stringBuilder);
-
-            return text;
-        }
-
-        private static void Release(HtmlNode node)
-        {
-            if (node.IsChildrenInitilizedWithValues)
-            {
-                node.LazyChildren.ForEach(c => Release(c.Node));
-            }
-
-            HtmlPools.HtmlNodePool.MarkForRelease(node);
-
-            return;
-
-        }
-
-        // Recursively build the node and its children
-        private static void BuildNode(HtmlNode node, StringBuilder sb)
-        {
-            var nodeTextIntilized = node.IsTextInitializedWithValue;
-            var nodeCssInitilized = node.IsCssClassesInitializedWithValues;
-            var nodeAttrsInitilized = node.IsAttributesInitializedWithValues;
-            var nodeChildrenInitilized = node.IsChildrenInitilizedWithValues;
-            var nodeTag = node.Tag;
-            var nodeTagText = nodeTag.ToTagName();
-
-            // Open tag
-            sb.Append('<').Append(nodeTagText);
-
-            // Add CSS classes if present
-            if (nodeCssInitilized)
-            {
-                var nodeCssClasses = node.LazyCssClasses;
-
-                sb.Append(" class=\"");
-
-                foreach (var cssClass in nodeCssClasses)
-                {
-                    sb.Append(cssClass).Append(' ');
-                }
-
-                sb.Append('"');
-            }
-
-            // Add attributes
-            if (nodeAttrsInitilized)
-            {
-                var nodeAttrs = node.LazyAttributes;
-
-                foreach (var (key, value) in nodeAttrs)
-                {
-                    sb.Append(' ').Append(key).Append("=\"").Append(value).Append('"');
-                }
-            }
-
-            sb.Append('>');
-
-            // Add text content before the first child
-
-            int lastPosition = 0;
-
-            if (nodeChildrenInitilized)
-            {
-                var nodeChildren = node.LazyChildren;
-
-                foreach (var (child, position) in nodeChildren)
-                {
-                    if (nodeTextIntilized)
-                    {
-                        var nodeText = node.LazyText.GetChunks();
-
-                        foreach (var chunk in nodeText)
-                        {
-                            var tSpan = chunk.Span;
-                            sb.Append(tSpan[lastPosition..position]);
-                        }
-                    }
-
-                    BuildNode(child, sb);
-
-                    lastPosition = position;
-                }
-            }
-
-            // Add remaining text after the last child
-            if (nodeTextIntilized)
-            {
-                var nodeText = node.LazyText.GetChunks();
-
-                foreach (var chunk in nodeText)
-                {
-                    var tSpan = chunk.Span;
-                    sb.Append(tSpan[lastPosition..]);
-                }
-            }
-
-            // Close tag
-            if (!nodeTag.IsSelfClosing())
-            {
-                sb.Append("</").Append(nodeTagText).Append('>');
-            }
-        }
-
         public static unsafe string SanitizeText(ReadOnlySpan<char> text)
         {
             var sb = HtmlPools.HtmlSbPool.Get();
@@ -504,6 +388,137 @@ namespace HtmxDotnet.utils
 
             return sanitizedText;
         }
+
+        public HtmlBuilder RenderBuilderView<VT>(IBuilderView<VT> bv, VT model)
+        {
+            bv.RenderHtml(this, model);
+
+            return this;
+        }
+
+        // Build the final HTML string
+        public string Build(bool includeDocType = false)
+        {
+            var stringBuilder = HtmlPools.HtmlSbPool.Get();
+
+            if (includeDocType)
+            {
+                stringBuilder.Append("<!DOCTYPE html>");
+            }
+
+            BuildNode(_rootNode, stringBuilder);
+
+            var text = stringBuilder.ToString();
+
+            HtmlPools.HtmlSbPool.Return(stringBuilder);
+
+            return text;
+        }
+
+        private static void Release(HtmlNode node)
+        {
+            if (node.HasChildren)
+            {
+                node.LazyChildren.ForEach(c => Release(c.Node));
+            }
+
+            HtmlPools.HtmlNodePool.MarkForRelease(node);
+
+            return;
+
+        }
+
+        // Recursively build the node and its children
+        private static void BuildNode(HtmlNode node, StringBuilder sb)
+        {
+            var nodeTextIntilized = node.HasText;
+            var nodeCssInitilized = node.HasCssClasses;
+            var nodeAttrsInitilized = node.HasAttributes;
+            var nodeChildrenInitilized = node.HasChildren;
+            var nodeTag = node.Tag;
+            var isSelfClosing = nodeTag.IsSelfClosing();
+            var nodeTagText = nodeTag.ToTagName();
+
+            // Open tag
+            sb.Append('<').Append(nodeTagText);
+
+            // Add CSS classes if present
+            if (nodeCssInitilized)
+            {
+                var nodeCssClasses = node.LazyCssClasses;
+
+                sb.Append(" class=\"");
+
+                foreach (var cssClass in nodeCssClasses)
+                {
+                    sb.Append(cssClass).Append(' ');
+                }
+
+                sb.Append('"');
+            }
+
+            // Add attributes
+            if (nodeAttrsInitilized)
+            {
+                var nodeAttrs = node.LazyAttributes;
+
+                foreach (var (key, value) in nodeAttrs)
+                {
+                    sb.Append(' ').Append(key).Append("=\"").Append(value).Append('"');
+                }
+            }
+
+
+            sb.Append(isSelfClosing ? " />" : '>');
+
+            // Add text content before the first child
+
+            int lastPosition = 0;
+
+            if (nodeChildrenInitilized)
+            {
+                var nodeChildren = node.LazyChildren;
+
+                foreach (var (child, position) in nodeChildren)
+                {
+                    if (nodeTextIntilized)
+                    {
+                        // Where we print all of the node text between children on one line, need to indent before going into loop
+                        var nodeText = node.LazyText.GetChunks();
+
+                        foreach (var chunk in nodeText)
+                        {
+                            var tSpan = chunk.Span;
+                            sb.Append(tSpan[lastPosition..position]);
+                        }
+                    }
+
+                    BuildNode(child, sb);
+
+                    lastPosition = position;
+                }
+            }
+
+            // Add remaining text after the last child
+            if (nodeTextIntilized)
+            {
+                var nodeText = node.LazyText.GetChunks();
+
+                foreach (var chunk in nodeText)
+                {
+                    var tSpan = chunk.Span;
+                    sb.Append(tSpan[lastPosition..]);
+                }
+            }
+
+            // Close tag
+            // Not all tags require closing tags. 
+            if (!isSelfClosing)
+            {
+                sb.Append("</").Append(nodeTagText).Append('>');
+            }
+        }
+
 
         public void Dispose()
         {
