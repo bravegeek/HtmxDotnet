@@ -107,6 +107,8 @@ namespace HtmxDotnet.utils
         {
             Tag = tag;
 
+            CurrentTextContentIndex = 0;
+
             _attributes?.Clear();
             _cssClasses?.Clear();
             _children?.Clear();
@@ -192,7 +194,7 @@ namespace HtmxDotnet.utils
     }
 
 
-    public class HtmlBuilder : IDisposable
+    public sealed class HtmlBuilder : IDisposable
     {
         private readonly Stack<HtmlNode> _nodeStack = new();
         private readonly HtmlNode _rootNode;
@@ -264,6 +266,7 @@ namespace HtmxDotnet.utils
                 if (name.Length == 5 && name.Equals("class", StringComparison.Ordinal))
                 {
                     AddCssClasses(value.Split(' ')); // Intercept CSS classes
+
                     continue;
                 }
 
@@ -277,6 +280,7 @@ namespace HtmxDotnet.utils
         public HtmlBuilder AddCssClasses(params string[] cssClasses)
         {
             var curNodeCssClasses = _nodeStack.Peek().LazyCssClasses;
+
             Span<string> cssClassSpan = cssClasses;
 
             for (var i = 0; i < cssClassSpan.Length; i++)
@@ -344,6 +348,7 @@ namespace HtmxDotnet.utils
                     if ((ascii & ~0x7F) != 0) // Check if the character is non-ASCII
                     {
                         sb.Append(c);
+
                         continue;
                     }
 
@@ -384,6 +389,7 @@ namespace HtmxDotnet.utils
             }
 
             var sanitizedText = sb.ToString();
+
             HtmlPools.HtmlSbPool.Return(sb);
 
             return sanitizedText;
@@ -396,8 +402,19 @@ namespace HtmxDotnet.utils
             return this;
         }
 
-        // Build the final HTML string
         public string Build(bool includeDocType = false)
+        {
+            return BuildInternal(includeDocType, pretty: false);
+        }
+
+        public string BuildPretty(bool includeDocType = false)
+        {
+            return BuildInternal(includeDocType, pretty: true);
+        }
+
+
+        // Build the final HTML string
+        private string BuildInternal(bool includeDocType, bool pretty)
         {
             var stringBuilder = HtmlPools.HtmlSbPool.Get();
 
@@ -406,7 +423,7 @@ namespace HtmxDotnet.utils
                 stringBuilder.Append("<!DOCTYPE html>");
             }
 
-            BuildNode(_rootNode, stringBuilder);
+            BuildNode(_rootNode, stringBuilder, pretty ? 0 : -1);
 
             var text = stringBuilder.ToString();
 
@@ -429,21 +446,30 @@ namespace HtmxDotnet.utils
         }
 
         // Recursively build the node and its children
-        private static void BuildNode(HtmlNode node, StringBuilder sb)
+        private static void BuildNode(HtmlNode node, StringBuilder sb, int indentLevel)
         {
-            var nodeTextIntilized = node.HasText;
-            var nodeCssInitilized = node.HasCssClasses;
-            var nodeAttrsInitilized = node.HasAttributes;
-            var nodeChildrenInitilized = node.HasChildren;
+            bool isPretty = indentLevel >= 0;
+            int currentIndentLevel = isPretty ? indentLevel * 4 : 0;
+
+            // Prepare common values
+            var nodeTextInitialized = node.HasText;
+            var nodeCssInitialized = node.HasCssClasses;
+            var nodeAttrsInitialized = node.HasAttributes;
+            var nodeChildrenInitialized = node.HasChildren;
             var nodeTag = node.Tag;
             var isSelfClosing = nodeTag.IsSelfClosing();
             var nodeTagText = nodeTag.ToTagName();
 
-            // Open tag
+            // Indent and open the tag
+            if (isPretty && currentIndentLevel > 0)
+            {
+                sb.Append(new string(' ', currentIndentLevel));
+            }
+
             sb.Append('<').Append(nodeTagText);
 
             // Add CSS classes if present
-            if (nodeCssInitilized)
+            if (nodeCssInitialized)
             {
                 var nodeCssClasses = node.LazyCssClasses;
 
@@ -454,11 +480,12 @@ namespace HtmxDotnet.utils
                     sb.Append(cssClass).Append(' ');
                 }
 
+                sb.Length--; // Remove the trailing space
                 sb.Append('"');
             }
 
-            // Add attributes
-            if (nodeAttrsInitilized)
+            // Add attributes if present
+            if (nodeAttrsInitialized)
             {
                 var nodeAttrs = node.LazyAttributes;
 
@@ -468,57 +495,106 @@ namespace HtmxDotnet.utils
                 }
             }
 
+            // Handle self-closing tag
+            if (isSelfClosing)
+            {
+                sb.Append(isPretty ? " />" : "/>");
 
-            sb.Append(isSelfClosing ? " />" : '>');
+                if (isPretty)
+                {
+                    sb.AppendLine();
+                }
 
-            // Add text content before the first child
+                return;
+            }
 
+            sb.Append('>');
+
+            if (isPretty)
+            {
+                sb.AppendLine();
+            }
+
+            // Handle text content and children
             int lastPosition = 0;
 
-            if (nodeChildrenInitilized)
+            if (nodeChildrenInitialized)
             {
                 var nodeChildren = node.LazyChildren;
+                StringBuilder.ChunkEnumerator? nodeText = nodeTextInitialized ? node.LazyText.GetChunks() : null;
 
                 foreach (var (child, position) in nodeChildren)
                 {
-                    if (nodeTextIntilized)
+                    // Add text content up to the position of the current child
+                    if (nodeTextInitialized)
                     {
-                        // Where we print all of the node text between children on one line, need to indent before going into loop
-                        var nodeText = node.LazyText.GetChunks();
-
-                        foreach (var chunk in nodeText)
+                        foreach (var chunk in nodeText!)
                         {
                             var tSpan = chunk.Span;
-                            sb.Append(tSpan[lastPosition..position]);
+
+                            if (lastPosition < position)
+                            {
+                                if (isPretty)
+                                {
+                                    sb.Append(new string(' ', (indentLevel + 1) * 4));
+                                }
+
+                                sb.Append(tSpan[lastPosition..position]);
+
+                                if (isPretty)
+                                {
+                                    sb.AppendLine();
+                                }
+
+                            }
                         }
+
+                        lastPosition = position;
                     }
 
-                    BuildNode(child, sb);
-
-                    lastPosition = position;
+                    // Recursively build the child node
+                    BuildNode(child, sb, isPretty ? indentLevel + 1 : -1);
                 }
             }
 
-            // Add remaining text after the last child
-            if (nodeTextIntilized)
+            if (nodeTextInitialized)
             {
                 var nodeText = node.LazyText.GetChunks();
 
                 foreach (var chunk in nodeText)
                 {
                     var tSpan = chunk.Span;
-                    sb.Append(tSpan[lastPosition..]);
+
+                    if (lastPosition < tSpan.Length)
+                    {
+                        if (isPretty)
+                        {
+                            sb.Append(new string(' ', (indentLevel + 1) * 4));
+                        }
+
+                        sb.Append(tSpan[lastPosition..]);
+
+                        if (isPretty)
+                        {
+                            sb.AppendLine();
+                        }
+                    }
                 }
             }
 
-            // Close tag
-            // Not all tags require closing tags. 
-            if (!isSelfClosing)
+            // Close the tag
+            if (isPretty && currentIndentLevel > 0)
             {
-                sb.Append("</").Append(nodeTagText).Append('>');
+                sb.Append(new string(' ', currentIndentLevel));
+            }
+
+            sb.Append("</").Append(nodeTagText).Append('>');
+
+            if (isPretty)
+            {
+                sb.AppendLine();
             }
         }
-
 
         public void Dispose()
         {

@@ -6,7 +6,7 @@
     using (var hb = new HtmxDotnet.utils.HtmlBuilder())
     {
         var view = new MultiTabFormBV();
-        html = view.RenderHtml(hb, Model).Build();
+        html = view.RenderHtml(hb, Model).BuildPretty();
     };
 
 }
