@@ -53,10 +53,11 @@ namespace HtmxDotnet.utils
     {
         private readonly int _initialCap;
         private readonly int _maxCap;
+
         public HtmlStringBuilderPolicy(int initialCap, int maxCap)
         {
-            this._maxCap = maxCap;
-            this._initialCap = initialCap;
+            _maxCap = maxCap;
+            _initialCap = initialCap;
         }
 
         public override StringBuilder Create()
@@ -102,19 +103,17 @@ namespace HtmxDotnet.utils
             Tag = tag;
 
             _attributes?.Clear();
-
             _cssClasses?.Clear();
+            _children?.Clear();
 
             if (_text?.Length > 128)
             {
                 _text = null;
-            }
-            else
-            {
-                _text?.Clear();
-            };
 
-            _children?.Clear();
+                return this;
+            }
+
+            _text?.Clear();
 
             return this;
         }
@@ -127,7 +126,9 @@ namespace HtmxDotnet.utils
                 {
                     return _children;
                 }
-                _children = new();
+
+                _children = [];
+
                 return _children;
             }
         }
@@ -140,7 +141,9 @@ namespace HtmxDotnet.utils
                 {
                     return _attributes;
                 }
-                _attributes = new();
+
+                _attributes = [];
+
                 return _attributes;
 
             }
@@ -154,7 +157,9 @@ namespace HtmxDotnet.utils
                 {
                     return _cssClasses;
                 }
-                _cssClasses = new();
+
+                _cssClasses = [];
+
                 return _cssClasses;
             }
         }
@@ -168,7 +173,7 @@ namespace HtmxDotnet.utils
                     return _text;
                 }
 
-                _text = new(64);//HtmlPools.HtmlSbPool.Get();
+                _text = new(64);
 
                 return _text;
             }
@@ -177,7 +182,7 @@ namespace HtmxDotnet.utils
 
     internal static class HtmlPools
     {
-        public static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new(new HtmlStringBuilderPolicy(32, 2048), 10);
+        public static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new(new HtmlStringBuilderPolicy(32, 2048), 100);
         public static readonly HtmlNodePool HtmlNodePool = new();
     }
 
@@ -190,18 +195,15 @@ namespace HtmxDotnet.utils
         public HtmlBuilder(HtmlTag rootTag = HtmlTag.Div)
         {
             _rootNode = HtmlPools.HtmlNodePool.Get(rootTag); //new HtmlNode(rootTag);
-
             _nodeStack.Push(_rootNode);
         }
 
         public HtmlBuilder Open(HtmlTag tag)
         {
             var newNode = HtmlPools.HtmlNodePool.Get(tag);  //new HtmlNode(tag);
-
             var parent = _nodeStack.Peek();
 
             parent.LazyChildren.Add((newNode, parent.CurrentTextContentIndex));
-
             _nodeStack.Push(newNode);
 
             return this;
@@ -246,7 +248,6 @@ namespace HtmxDotnet.utils
         public HtmlBuilder AddAttributes(params (string name, string value)[] attributes)
         {
             var curNodeAttrs = _nodeStack.Peek().LazyAttributes;
-
             Span<(string name, string value)> attributeSpan = attributes;
 
             for (var i = 0; i < attributeSpan.Length; i++)
@@ -271,7 +272,6 @@ namespace HtmxDotnet.utils
         public HtmlBuilder AddCssClasses(params string[] cssClasses)
         {
             var curNodeCssClasses = _nodeStack.Peek().LazyCssClasses;
-
             Span<string> cssClassSpan = cssClasses;
 
             for (var i = 0; i < cssClassSpan.Length; i++)
@@ -307,11 +307,9 @@ namespace HtmxDotnet.utils
         public HtmlBuilder AddText(string text)
         {
             var node = _nodeStack.Peek();
-
             var nodeText = node.LazyText;
 
             nodeText.Append(text);
-
             node.CurrentTextContentIndex = nodeText.Length;
 
             return this;
@@ -503,19 +501,21 @@ namespace HtmxDotnet.utils
 
             var sanitizedText = sb.ToString();
             HtmlPools.HtmlSbPool.Return(sb);
+
             return sanitizedText;
         }
 
         public void Dispose()
         {
-            Release(this._rootNode);
+            Release(_rootNode);
             HtmlPools.HtmlNodePool.ReleaseAll();
         }
     }
 
     public static class HtmlTagEnumExtensions
     {
-        private static readonly HtmlTag[] _selfClosingTags = [
+        private static readonly HtmlTag[] _selfClosingTags =
+        [
             HtmlTag.Link,
             HtmlTag.Img,
             HtmlTag.Br,
@@ -529,10 +529,9 @@ namespace HtmxDotnet.utils
             HtmlTag.Param,
             HtmlTag.Source,
             HtmlTag.Track,
-
         ];
 
-        private static ConcurrentDictionary<HtmlTag, string> _tagNameFlyWeight = []; //Cache tag strings, save some memory!
+        private static readonly ConcurrentDictionary<HtmlTag, string> _tagNameFlyWeight = []; //Cache tag strings, save some memory!
 
         public static string ToTagName(this HtmlTag tag)
         {
