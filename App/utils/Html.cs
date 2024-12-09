@@ -5,54 +5,42 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace HtmxDotnet.utils
 {
-    internal class HtmlNodePool
+    internal sealed class HtmlNodePool
     {
-        private readonly ConcurrentQueue<HtmlNode> _pool = new();
-        private readonly HashSet<HtmlNode> _activeNodes = [];
-        private readonly int _maxCapacity;
+        private readonly ObjectPool<HtmlNode> _pool;
 
         internal HtmlNodePool(int maxCap)
         {
-            _maxCapacity = maxCap;
+            _pool = new DefaultObjectPool<HtmlNode>(new HtmlNodePolicy(), maxCap);
         }
 
         internal HtmlNode Get(HtmlTag tag)
         {
-            var node = _pool.TryDequeue(out var newNode) ? newNode.ResetAndReturn(tag) : new HtmlNode(tag);
-
-            // Mark the node as active
-            lock (_activeNodes)
-            {
-                _activeNodes.Add(node);
-            }
-
+            var node = _pool.Get();
+            node.Tag = tag;
             return node;
         }
 
         internal void MarkForRelease(HtmlNode node)
         {
-            lock (_activeNodes)
-            {
-                if (_activeNodes.Remove(node) && _pool.Count < _maxCapacity)
-                {
-                    _pool.Enqueue(node);
-                }
-            }
-        }
-
-        internal void ReleaseAll()
-        {
-            lock (_activeNodes)
-            {
-                foreach (var node in _activeNodes)
-                {
-                    _pool.Enqueue(node);
-                }
-
-                _activeNodes.Clear();
-            }
+            _pool.Return(node);
         }
     }
+
+    internal class HtmlNodePolicy : PooledObjectPolicy<HtmlNode>
+    {
+        public override HtmlNode Create()
+        {
+            return new HtmlNode();
+        }
+
+        public override bool Return(HtmlNode obj)
+        {
+            obj.ResetAndReturn(); // Reset the node for reuse
+            return true;
+        }
+    }
+
 
     internal class HtmlStringBuilderPolicy : PooledObjectPolicy<StringBuilder>
     {
@@ -103,9 +91,9 @@ namespace HtmxDotnet.utils
             Tag = tag;
         }
 
-        internal HtmlNode ResetAndReturn(HtmlTag tag)
+        internal HtmlNode ResetAndReturn()
         {
-            Tag = tag;
+            //Tag = tag;
 
             CurrentTextContentIndex = 0;
 
@@ -599,7 +587,7 @@ namespace HtmxDotnet.utils
         public void Dispose()
         {
             Release(_rootNode);
-            HtmlPools.HtmlNodePool.ReleaseAll();
+            //HtmlPools.HtmlNodePool.MarkForRelease(_rootNode);
         }
     }
 
