@@ -177,7 +177,7 @@ namespace HtmxDotnet.utils
 
     internal static class HtmlPools
     {
-        internal static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new(new HtmlStringBuilderPolicy(64, 10_000), 25);
+        internal static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new(new HtmlStringBuilderPolicy(64, 10_000), 250);
         internal static readonly HtmlNodePool HtmlNodePool = new(1000);
     }
 
@@ -240,7 +240,7 @@ namespace HtmxDotnet.utils
         }
 
         // Add arbitrary attributes
-        public HtmlBuilder AddAttributes(params (string name, string value)[] attributes)
+        public HtmlBuilder Attributes(params (string name, string value)[] attributes)
         {
             var curNodeAttrs = _nodeStack.Peek().LazyAttributes;
             Span<(string name, string value)> attributeSpan = attributes;
@@ -253,7 +253,7 @@ namespace HtmxDotnet.utils
 
                 if (name.Length == 5 && name.Equals("class", StringComparison.Ordinal))
                 {
-                    AddCssClasses(value.Split(' ')); // Intercept CSS classes
+                    Classes(value.Split(' ')); // Intercept CSS classes
 
                     continue;
                 }
@@ -265,7 +265,7 @@ namespace HtmxDotnet.utils
         }
 
         // Add CSS classes
-        public HtmlBuilder AddCssClasses(params string[] cssClasses)
+        public HtmlBuilder Classes(params string[] cssClasses)
         {
             var curNodeCssClasses = _nodeStack.Peek().LazyCssClasses;
 
@@ -280,7 +280,7 @@ namespace HtmxDotnet.utils
         }
 
         // Set the ID attribute
-        public HtmlBuilder WithId(string id)
+        public HtmlBuilder Id(string id)
         {
             _nodeStack.Peek().LazyAttributes.Add("id", id);
 
@@ -288,7 +288,7 @@ namespace HtmxDotnet.utils
         }
 
         // Add data-* attributes
-        public HtmlBuilder AddDataAttributes(params (string, string)[] dataAttributes)
+        public HtmlBuilder DataAttributes(params (string, string)[] dataAttributes)
         {
             var curNodeDataAttrs = _nodeStack.Peek().LazyAttributes;
 
@@ -301,7 +301,7 @@ namespace HtmxDotnet.utils
         }
 
         // Add text to the current node
-        public HtmlBuilder AddText(string text)
+        public HtmlBuilder Text(string text)
         {
             var node = _nodeStack.Peek();
             var nodeText = node.LazyText;
@@ -312,14 +312,27 @@ namespace HtmxDotnet.utils
             return this;
         }
 
+        private void InternalText(StringBuilder text)
+        {
+            var node = _nodeStack.Peek();
+            var nodeText = node.LazyText;
+
+            nodeText.Append(text);
+            node.CurrentTextContentIndex = nodeText.Length;
+
+            HtmlPools.HtmlSbPool.Return(text);
+            //return this;
+        }
+
+
         public HtmlBuilder SanitizeAndAddText(string text)
         {
-            AddText(SanitizeText(text));
+            InternalText(SanitizeText(text));
 
             return this;
         }
 
-        public static unsafe string SanitizeText(ReadOnlySpan<char> text)
+        private static unsafe StringBuilder SanitizeText(ReadOnlySpan<char> text)
         {
             var sb = HtmlPools.HtmlSbPool.Get();
 
@@ -376,11 +389,11 @@ namespace HtmxDotnet.utils
                 }
             }
 
-            var sanitizedText = sb.ToString();
+            //var sanitizedText = sb.ToString();
 
-            HtmlPools.HtmlSbPool.Return(sb);
+            //HtmlPools.HtmlSbPool.Return(sb);
 
-            return sanitizedText;
+            return sb;
         }
 
         public HtmlBuilder RenderBuilderView<VT>(IBuilderView<VT> bv, VT model)

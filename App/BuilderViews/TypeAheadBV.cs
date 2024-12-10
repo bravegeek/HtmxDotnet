@@ -12,9 +12,9 @@ namespace HtmxDotnet.BuilderViews
         public HtmlBuilder RenderHtml(HtmlBuilder builder, HtmxConfig model)
         {
             builder.Open(HtmlTag.Div)
-                .AddAttributes(("style", "width: 50%;"))
+                .Attributes(("style", "width: 50%;"))
                 .Open(HtmlTag.Input)
-                    .AddAttributes(
+                    .Attributes(
                         ("style", "width: 100%"),
                         ("type", "text"),
                         ("name", "query"),
@@ -22,10 +22,10 @@ namespace HtmxDotnet.BuilderViews
                         ("autocomplete", "off"),
                         ("placeholder", "Type to search...")
                     )
-                    .AddAttributes(model.ToTupleArray())
+                    .Attributes(model.ToTupleArray())
                 .Close()
                 .Open(HtmlTag.Div)
-                    .AddAttributes(("class", "type-ah-result"), ("id", model.HxTarget))
+                    .Attributes(("class", "type-ah-result"), ("id", model.HxTarget))
                 .Close()
             .Close();
 
