@@ -14,7 +14,7 @@ namespace HtmxDotnet.utils
             _pool = new DefaultObjectPool<HtmlNode>(new HtmlNodePolicy(), maxCap);
         }
 
-        internal HtmlNode Get(HtmlTag tag)
+        internal HtmlNode Get(Tag tag)
         {
             var node = _pool.Get();
             node.Tag = tag;
@@ -83,10 +83,10 @@ namespace HtmxDotnet.utils
         internal bool HasCssClasses => _cssClasses != null && _cssClasses.Count > 0;
         internal bool HasText => _text != null && _text.Length > 0;
 
-        internal HtmlTag Tag { get; set; }
+        internal Tag Tag { get; set; }
         internal int CurrentTextContentIndex { get; set; } = 0;
 
-        internal HtmlNode(HtmlTag tag = HtmlTag.Div)
+        internal HtmlNode(Tag tag = Tag.Div)
         {
             Tag = tag;
         }
@@ -187,13 +187,13 @@ namespace HtmxDotnet.utils
         private readonly Stack<HtmlNode> _nodeStack = new();
         private readonly HtmlNode _rootNode;
 
-        public HtmlBuilder(HtmlTag rootTag = HtmlTag.Div)
+        public HtmlBuilder(Tag rootTag = Tag.Div)
         {
             _rootNode = HtmlPools.HtmlNodePool.Get(rootTag); //new HtmlNode(rootTag);
             _nodeStack.Push(_rootNode);
         }
 
-        public HtmlBuilder Open(HtmlTag tag)
+        public HtmlBuilder Open(Tag tag)
         {
             var newNode = HtmlPools.HtmlNodePool.Get(tag);  //new HtmlNode(tag);
             var parent = _nodeStack.Peek();
@@ -205,7 +205,7 @@ namespace HtmxDotnet.utils
         }
 
         // Close the current tag and pop the stack
-        public HtmlBuilder Close(HtmlTag tag)
+        public HtmlBuilder Close(Tag tag)
         {
             if (_nodeStack.Count <= 1)
             {
@@ -253,7 +253,7 @@ namespace HtmxDotnet.utils
 
                 if (name.Length == 5 && name.Equals("class", StringComparison.Ordinal))
                 {
-                    Classes(value.Split(' ')); // Intercept CSS classes
+                    Class(value.Split(' ')); // Intercept CSS classes
 
                     continue;
                 }
@@ -265,7 +265,7 @@ namespace HtmxDotnet.utils
         }
 
         // Add CSS classes
-        public HtmlBuilder Classes(params string[] cssClasses)
+        public HtmlBuilder Class(params string[] cssClasses)
         {
             var curNodeCssClasses = _nodeStack.Peek().LazyCssClasses;
 
@@ -321,7 +321,6 @@ namespace HtmxDotnet.utils
             node.CurrentTextContentIndex = nodeText.Length;
 
             HtmlPools.HtmlSbPool.Return(text);
-            //return this;
         }
 
 
@@ -388,10 +387,6 @@ namespace HtmxDotnet.utils
                     }
                 }
             }
-
-            //var sanitizedText = sb.ToString();
-
-            //HtmlPools.HtmlSbPool.Return(sb);
 
             return sb;
         }
@@ -600,39 +595,38 @@ namespace HtmxDotnet.utils
         public void Dispose()
         {
             Release(_rootNode);
-            //HtmlPools.HtmlNodePool.MarkForRelease(_rootNode);
         }
     }
 
     public static class HtmlTagEnumExtensions
     {
-        private static readonly HtmlTag[] _selfClosingTags =
+        private static readonly Tag[] _selfClosingTags =
         [
-            HtmlTag.Link,
-            HtmlTag.Img,
-            HtmlTag.Br,
-            HtmlTag.Hr,
-            HtmlTag.Wbr,
-            HtmlTag.Embed,
-            HtmlTag.Meta,
-            HtmlTag.Area,
-            HtmlTag.Col,
-            HtmlTag.Base,
-            HtmlTag.Param,
-            HtmlTag.Source,
-            HtmlTag.Track,
+            Tag.Link,
+            Tag.Img,
+            Tag.Br,
+            Tag.Hr,
+            Tag.Wbr,
+            Tag.Embed,
+            Tag.Meta,
+            Tag.Area,
+            Tag.Col,
+            Tag.Base,
+            Tag.Param,
+            Tag.Source,
+            Tag.Track,
         ];
 
-        private static readonly ConcurrentDictionary<HtmlTag, string> _tagNameFlyWeight = []; //Cache tag strings, save some memory!
+        private static readonly ConcurrentDictionary<Tag, string> _tagNameFlyWeight = []; //Cache tag strings, save some memory!
 
-        public static string ToTagName(this HtmlTag tag)
+        public static string ToTagName(this Tag tag)
         {
             return _tagNameFlyWeight.GetOrAdd(tag, tag => tag.ToString().ToLower());
         }
 
-        public unsafe static bool IsSelfClosing(this HtmlTag tag)
+        public unsafe static bool IsSelfClosing(this Tag tag)
         {
-            fixed (HtmlTag* tagsPtr = _selfClosingTags)  // Pin the array to a fixed location in memory
+            fixed (Tag* tagsPtr = _selfClosingTags)  // Pin the array to a fixed location in memory
             {
                 for (var i = 0; i < _selfClosingTags.Length; i++)
                 {
@@ -647,7 +641,7 @@ namespace HtmxDotnet.utils
         }
     }
 
-    public enum HtmlTag
+    public enum Tag
     {
         // Document metadata
         Html,

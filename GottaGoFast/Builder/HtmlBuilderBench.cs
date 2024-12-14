@@ -9,16 +9,16 @@ namespace GottaGoFast.BuilderBench
     public class HtmlBuilderBench
     {
 
-        // [MinIterationCount(30)] // Minimum number of iterations
-        // [MaxIterationCount(100)] // Maximum number of iterations
-        // [BenchmarkCategory("Sani")]
-        // [Benchmark]
+        [MinIterationCount(30)] // Minimum number of iterations
+        [MaxIterationCount(50)] // Maximum number of iterations
+        [BenchmarkCategory("Sani")]
+        [Benchmark]
         public string BuilderBenchSanitizer()
         {
             using var hb = new
-            HtmlBuilder(HtmlTag.Div)
-                .Open(HtmlTag.Div).Classes("user-input")
-                    .Open(HtmlTag.P).Classes("user-article")
+            HtmlBuilder(Tag.Div)
+                .Open(Tag.Div).Class("user-input")
+                    .Open(Tag.P).Class("user-article")
                         .SanitizeAndAddText(@"
                         <html>
                             <script>
@@ -51,19 +51,19 @@ namespace GottaGoFast.BuilderBench
             return res;
         }
 
-        // [MinIterationCount(30)] // Minimum number of iterations
-        // [MaxIterationCount(100)] // Maximum number of iterations
-        // [Benchmark]
+        [MinIterationCount(30)] // Minimum number of iterations
+        [MaxIterationCount(50)] // Maximum number of iterations
+        [Benchmark]
         public string BuilderBenchSmallRender()
         {
-            using var hb = new HtmlBuilder(HtmlTag.Div);
-            hb.Attributes(("article-type", "explination")).Classes("article")
-                .Open(HtmlTag.P).Attributes(("Auther", "Will")).Classes("paragraph", "fancy-text", "document")
-                    .Open(HtmlTag.Strong)
+            using var hb = new HtmlBuilder(Tag.Div);
+            hb.Attributes(("article-type", "explination")).Class("article")
+                .Open(Tag.P).Attributes(("Auther", "Will")).Class("paragraph", "fancy-text", "document")
+                    .Open(Tag.Strong)
                         .Text("Lorem Ipsum")
                     .Close()
                     .Text("Hello")
-                    .Open(HtmlTag.Strong).Classes("cursive", "drop-cap")
+                    .Open(Tag.Strong).Class("cursive", "drop-cap")
                         .Text("Where does it come from?")
                     .Close()
                     .Text("World")
@@ -74,8 +74,8 @@ namespace GottaGoFast.BuilderBench
 
         }
 
-        [MinIterationCount(5)] // Minimum number of iterations
-        [MaxIterationCount(10)] // Maximum number of iterations
+        [MinIterationCount(10)] // Minimum number of iterations
+        [MaxIterationCount(15)] // Maximum number of iterations
         [Benchmark]
         public string BuilderBenchLargeRender()
         {
@@ -100,13 +100,13 @@ namespace GottaGoFast.BuilderBench
             using var builder = new HtmlBuilder();
 
             builder
-                .Open(HtmlTag.H3)
+                .Open(Tag.H3)
                     .Text("MultiTabForm")
                 .Close()
 
-                .Open(HtmlTag.Div)
-                    .Classes("instructions")
-                    .Open(HtmlTag.P).Id("Instructions")
+                .Open(Tag.Div)
+                    .Class("instructions")
+                    .Open(Tag.P).Id("Instructions")
                         .Text(
                             @"
                                 Lorem Ipsum is simply dummy text of the printing and typesetting industry. 
@@ -122,22 +122,22 @@ namespace GottaGoFast.BuilderBench
                     .Close()
                 .Close()
 
-                .Open(HtmlTag.Div).Classes("user-input")
-                    .Open(HtmlTag.P).Classes("user-article")
+                .Open(Tag.Div).Class("user-input")
+                    .Open(Tag.P).Class("user-article")
                         .SanitizeAndAddText("<script>alert('Hello!');</script> <b>bold</b>")//(°ー°〃)
                     .Close()
                 .Close()
 
-                .Open(HtmlTag.Ul)
-                    .Classes("nav", "nav-tabs")
+                .Open(Tag.Ul)
+                    .Class("nav", "nav-tabs")
                     .Id("myTab")
                     .Attributes(("role", "tablist"))
 
                     // Personal Info tab
-                    .Open(HtmlTag.Li)
-                        .Classes("nav-item")
-                        .Open(HtmlTag.A)
-                            .Classes("nav-link", "active")
+                    .Open(Tag.Li)
+                        .Class("nav-item")
+                        .Open(Tag.A)
+                            .Class("nav-link", "active")
                             .Id("personal-tab")
                             .Attributes(("href", "#"))
                             .DataAttributes(("tab", "personal-info"))
@@ -146,10 +146,10 @@ namespace GottaGoFast.BuilderBench
                     .Close()
 
                     // Address Info tab
-                    .Open(HtmlTag.Li)
-                        .Classes("nav-item")
-                        .Open(HtmlTag.A)
-                            .Classes("nav-link")
+                    .Open(Tag.Li)
+                        .Class("nav-item")
+                        .Open(Tag.A)
+                            .Class("nav-link")
                             .Id("address-tab")
                             .Attributes(("href", "#"))
                             .DataAttributes(("tab", "address-info"))
@@ -158,10 +158,10 @@ namespace GottaGoFast.BuilderBench
                     .Close()
 
                     // Favorites Info tab
-                    .Open(HtmlTag.Li)
-                        .Classes("nav-item")
-                        .Open(HtmlTag.A)
-                            .Classes("nav-link")
+                    .Open(Tag.Li)
+                        .Class("nav-item")
+                        .Open(Tag.A)
+                            .Class("nav-link")
                             .Id("favorites-tab")
                             .Attributes(("href", "#"))
                             .DataAttributes(("tab", "favorites-info"))
@@ -170,10 +170,10 @@ namespace GottaGoFast.BuilderBench
                     .Close()
 
                     // Confirmation tab
-                    .Open(HtmlTag.Li)
-                        .Classes("nav-item")
-                        .Open(HtmlTag.A)
-                            .Classes("nav-link")
+                    .Open(Tag.Li)
+                        .Class("nav-item")
+                        .Open(Tag.A)
+                            .Class("nav-link")
                             .Id("confirmation-tab")
                             .Attributes(("href", "#"))
                             .DataAttributes(("tab", "confirmation"))
@@ -183,49 +183,49 @@ namespace GottaGoFast.BuilderBench
                 .Close() // End of UL
 
                 // Tab content div
-                .Open(HtmlTag.Div)
+                .Open(Tag.Div)
                     .Id("tabContent")
-                    .Classes("tab-content")
+                    .Class("tab-content")
 
                     // Personal Info Tab Content
-                    .Open(HtmlTag.Div)
+                    .Open(Tag.Div)
                         .Id("personal-info")
-                        .Classes("tab-pane", "fade", "show", "active")
+                        .Class("tab-pane", "fade", "show", "active")
 
-                        .Open(HtmlTag.Div)
-                            .Classes("form-group")
-                            .Open(HtmlTag.Label)
+                        .Open(Tag.Div)
+                            .Class("form-group")
+                            .Open(Tag.Label)
                                 .Attributes(("for", "firstName"))
                                 .Text("First Name")
                             .Close()
-                            .Open(HtmlTag.Input)
-                                .Classes("form-control")
+                            .Open(Tag.Input)
+                                .Class("form-control")
                                 .Id("firstName")
                                 .Attributes(("type", "text"), ("name", "PersonalInfo.FirstName"), ("value", "John"), ("required", "required"))
                             .Close()
                         .Close()
 
-                        .Open(HtmlTag.Div)
-                            .Classes("form-group")
-                            .Open(HtmlTag.Label)
+                        .Open(Tag.Div)
+                            .Class("form-group")
+                            .Open(Tag.Label)
                                 .Attributes(("for", "lastName"))
                                 .Text("Last Name")
                             .Close()
-                            .Open(HtmlTag.Input)
-                                .Classes("form-control")
+                            .Open(Tag.Input)
+                                .Class("form-control")
                                 .Id("lastName")
                                 .Attributes(("type", "text"), ("name", "PersonalInfo.LastName"), ("value", "Doe"), ("required", "required"))
                             .Close()
                         .Close()
 
-                        .Open(HtmlTag.Div)
-                            .Classes("form-group")
-                            .Open(HtmlTag.Label)
+                        .Open(Tag.Div)
+                            .Class("form-group")
+                            .Open(Tag.Label)
                                 .Attributes(("for", "email"))
                                 .Text("Email")
                             .Close()
-                            .Open(HtmlTag.Input)
-                                .Classes("form-control")
+                            .Open(Tag.Input)
+                                .Class("form-control")
                                 .Id("email")
                                 .Attributes(("type", "email"), ("name", "PersonalInfo.Email"), ("value", "jdoe@mail.com"), ("required", "required"))
                             .Close()
@@ -233,44 +233,44 @@ namespace GottaGoFast.BuilderBench
                     .Close()
 
                     // Address Info Tab Content
-                    .Open(HtmlTag.Div)
+                    .Open(Tag.Div)
                         .Id("address-info")
-                        .Classes("tab-pane", "fade")
+                        .Class("tab-pane", "fade")
 
-                        .Open(HtmlTag.Div)
-                            .Classes("form-group")
-                            .Open(HtmlTag.Label)
+                        .Open(Tag.Div)
+                            .Class("form-group")
+                            .Open(Tag.Label)
                                 .Attributes(("for", "streetAddress"))
                                 .Text("Street")
                             .Close()
-                            .Open(HtmlTag.Input)
-                                .Classes("form-control")
+                            .Open(Tag.Input)
+                                .Class("form-control")
                                 .Id("streetAddress")
                                 .Attributes(("type", "text"), ("name", "AddressInfo.StreetAddress"), ("value", "123 Apple Court Drive"), ("required", "required"))
                             .Close()
                         .Close()
 
-                        .Open(HtmlTag.Div)
-                            .Classes("form-group")
-                            .Open(HtmlTag.Label)
+                        .Open(Tag.Div)
+                            .Class("form-group")
+                            .Open(Tag.Label)
                                 .Attributes(("for", "city"))
                                 .Text("City")
                             .Close()
-                            .Open(HtmlTag.Input)
-                                .Classes("form-control")
+                            .Open(Tag.Input)
+                                .Class("form-control")
                                 .Id("city")
                                 .Attributes(("type", "text"), ("name", "AddressInfo.City"), ("value", "Las Vegas"), ("required", "required"))
                             .Close()
                         .Close()
 
-                        .Open(HtmlTag.Div)
-                            .Classes("form-group")
-                            .Open(HtmlTag.Label)
+                        .Open(Tag.Div)
+                            .Class("form-group")
+                            .Open(Tag.Label)
                                 .Attributes(("for", "zipCode"))
                                 .Text("Zip Code")
                             .Close()
-                            .Open(HtmlTag.Input)
-                                .Classes("form-control")
+                            .Open(Tag.Input)
+                                .Class("form-control")
                                 .Id("zipCode")
                                 .Attributes(("type", "text"), ("name", "AddressInfo.ZipCode"), ("value", "77777"), ("required", "required"))
                             .Close()
@@ -278,44 +278,44 @@ namespace GottaGoFast.BuilderBench
                     .Close()
 
                     // Favorites Info Tab Content
-                    .Open(HtmlTag.Div)
+                    .Open(Tag.Div)
                         .Id("favorites-info")
-                        .Classes("tab-pane", "fade")
+                        .Class("tab-pane", "fade")
 
-                        .Open(HtmlTag.Div)
-                            .Classes("form-group")
-                            .Open(HtmlTag.Label)
+                        .Open(Tag.Div)
+                            .Class("form-group")
+                            .Open(Tag.Label)
                                 .Attributes(("for", "favoriteColor"))
                                 .Text("Favorite Color")
                             .Close()
-                            .Open(HtmlTag.Input)
-                                .Classes("form-control")
+                            .Open(Tag.Input)
+                                .Class("form-control")
                                 .Id("favoriteColor")
                                 .Attributes(("type", "text"), ("name", "FavoritesInfo.FavoriteColor"), ("value", "Blue"), ("required", "required"))
                             .Close()
-                            .Open(HtmlTag.Div)
+                            .Open(Tag.Div)
                                 .Attributes(("style", "margin-top: 10px;"))
-                                .Open(HtmlTag.Label)
+                                .Open(Tag.Label)
                                     .Text("Search suggestions")
                                 .Close()
                             .RenderBuilderView(typeAheadView, htmxConfigColor)
                             .Close()
                         .Close()
 
-                        .Open(HtmlTag.Div)
-                            .Classes("form-group")
-                            .Open(HtmlTag.Label)
+                        .Open(Tag.Div)
+                            .Class("form-group")
+                            .Open(Tag.Label)
                                 .Attributes(("for", "favoriteFood"))
                                 .Text("Favorite Food")
                             .Close()
-                            .Open(HtmlTag.Input)
-                                .Classes("form-control")
+                            .Open(Tag.Input)
+                                .Class("form-control")
                                 .Id("favoriteFood")
                                 .Attributes(("type", "text"), ("name", "FavoritesInfo.FavoriteFood"), ("value", "Quiche"), ("required", "required"))
                             .Close()
-                            .Open(HtmlTag.Div)
+                            .Open(Tag.Div)
                                 .Attributes(("style", "margin-top: 10px;"))
-                                .Open(HtmlTag.Label)
+                                .Open(Tag.Label)
                                     .Text("Search suggestions")
                                 .Close()
                                 .RenderBuilderView(typeAheadView, htmxConfigFood)
@@ -323,29 +323,29 @@ namespace GottaGoFast.BuilderBench
                         .Close()
 
                     // Confirmation Tab Content
-                    .Open(HtmlTag.Div)
+                    .Open(Tag.Div)
                         .Id("confirmation")
-                        .Classes("tab-pane", "fade")
-                        .Open(HtmlTag.P)
+                        .Class("tab-pane", "fade")
+                        .Open(Tag.P)
                             .Text("Please review your information before submitting.")
                         .Close()
                     .Close()
                 .Close() // End of tab-content div
 
-                .Open(HtmlTag.Div)
+                .Open(Tag.Div)
                     .Id("formResponse")
                 .Close()
 
-                .Open(HtmlTag.Form)
+                .Open(Tag.Form)
                     .Id("multiTabForm")
-                    .Open(HtmlTag.Button)
-                        .Classes("btn", "btn-primary")
+                    .Open(Tag.Button)
+                        .Class("btn", "btn-primary")
                         .Attributes(("type", "submit"))
                         .Text("Submit")
                     .Close()
                 .Close();
 
-            var res = builder.Build();
+            var res = builder.BuildPretty();
             return res;
         }
     }

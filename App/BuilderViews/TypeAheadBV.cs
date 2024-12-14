@@ -11,9 +11,9 @@ namespace HtmxDotnet.BuilderViews
     {
         public HtmlBuilder RenderHtml(HtmlBuilder builder, HtmxConfig model)
         {
-            builder.Open(HtmlTag.Div)
+            builder.Open(Tag.Div)
                 .Attributes(("style", "width: 50%;"))
-                .Open(HtmlTag.Input)
+                .Open(Tag.Input)
                     .Attributes(
                         ("style", "width: 100%"),
                         ("type", "text"),
@@ -24,7 +24,7 @@ namespace HtmxDotnet.BuilderViews
                     )
                     .Attributes(model.ToTupleArray())
                 .Close()
-                .Open(HtmlTag.Div)
+                .Open(Tag.Div)
                     .Attributes(("class", "type-ah-result"), ("id", model.HxTarget))
                 .Close()
             .Close();
