@@ -118,6 +118,11 @@ function connectionMode(clickedState: State) {
 
 function editMode(clickedState: State) {
   console.log(clickedState);
+
+  const el = getElementById('state-name') as HTMLInputElement;
+
+  console.log(clickedState.data.name);
+  el.value = clickedState.data.name;
 }
 
 // Untils ===============================================================

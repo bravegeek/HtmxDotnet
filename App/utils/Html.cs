@@ -71,6 +71,13 @@ namespace HtmxDotnet.utils
         }
     }
 
+    internal static class HtmlPools
+    {
+        internal static readonly DefaultObjectPool<StringBuilder> HtmlBuilderSbPool = new(new HtmlStringBuilderPolicy(64, 10_000), 50);
+        internal static readonly DefaultObjectPool<StringBuilder> SanitizerSbPool = new(new HtmlStringBuilderPolicy(64, 1024), 100);
+        internal static readonly HtmlNodePool HtmlNodePool = new(1000);
+    }
+
     internal sealed class HtmlNode
     {
         private Dictionary<string, string>? _attributes;
@@ -93,15 +100,13 @@ namespace HtmxDotnet.utils
 
         internal HtmlNode ResetAndReturn()
         {
-            //Tag = tag;
-
             CurrentTextContentIndex = 0;
 
             _attributes?.Clear();
             _cssClasses?.Clear();
             _children?.Clear();
 
-            if (_text?.Length > 512)
+            if (_text?.Length > 1024)
             {
                 _text = null;
 
@@ -174,13 +179,6 @@ namespace HtmxDotnet.utils
             }
         }
     }
-
-    internal static class HtmlPools
-    {
-        internal static readonly DefaultObjectPool<StringBuilder> HtmlSbPool = new(new HtmlStringBuilderPolicy(64, 10_000), 250);
-        internal static readonly HtmlNodePool HtmlNodePool = new(1000);
-    }
-
 
     public sealed class HtmlBuilder : IDisposable
     {
@@ -320,7 +318,7 @@ namespace HtmxDotnet.utils
             nodeText.Append(text);
             node.CurrentTextContentIndex = nodeText.Length;
 
-            HtmlPools.HtmlSbPool.Return(text);
+            HtmlPools.HtmlBuilderSbPool.Return(text);
         }
 
 
@@ -333,7 +331,7 @@ namespace HtmxDotnet.utils
 
         private static unsafe StringBuilder SanitizeText(ReadOnlySpan<char> text)
         {
-            var sb = HtmlPools.HtmlSbPool.Get();
+            var sb = HtmlPools.HtmlBuilderSbPool.Get();
 
             fixed (char* ptr = text)
             {
@@ -412,7 +410,7 @@ namespace HtmxDotnet.utils
         // Build the final HTML string
         private string BuildInternal(bool includeDocType, bool pretty)
         {
-            var stringBuilder = HtmlPools.HtmlSbPool.Get();
+            var stringBuilder = HtmlPools.HtmlBuilderSbPool.Get();
 
             if (includeDocType)
             {
@@ -423,7 +421,7 @@ namespace HtmxDotnet.utils
 
             var text = stringBuilder.ToString();
 
-            HtmlPools.HtmlSbPool.Return(stringBuilder);
+            HtmlPools.HtmlBuilderSbPool.Return(stringBuilder);
 
             return text;
         }
@@ -444,8 +442,10 @@ namespace HtmxDotnet.utils
         // Recursively build the node and its children
         private static void BuildNode(HtmlNode node, StringBuilder sb, int indentLevel)
         {
+            // pretty print values
+            const int INDENT_MULTIPLIER = 1;
             bool isPretty = indentLevel >= 0;
-            int currentIndentLevel = isPretty ? indentLevel * 4 : 0;
+            int currentIndentLevel = isPretty ? indentLevel * INDENT_MULTIPLIER : 0;
 
             // Prepare common values
             var nodeTextInitialized = node.HasText;
@@ -532,7 +532,7 @@ namespace HtmxDotnet.utils
                             {
                                 if (isPretty)
                                 {
-                                    sb.Append(new string(' ', (indentLevel + 1) * 4));
+                                    sb.Append(new string(' ', (indentLevel + 1) * INDENT_MULTIPLIER));
                                 }
 
                                 sb.Append(tSpan[lastPosition..position]);
@@ -565,7 +565,7 @@ namespace HtmxDotnet.utils
                     {
                         if (isPretty)
                         {
-                            sb.Append(new string(' ', (indentLevel + 1) * 4));
+                            sb.Append(new string(' ', (indentLevel + 1) * INDENT_MULTIPLIER));
                         }
 
                         sb.Append(tSpan[lastPosition..]);
