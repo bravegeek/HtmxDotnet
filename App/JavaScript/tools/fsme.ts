@@ -1,6 +1,6 @@
 const canvas = document.getElementById('fsmCanvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
-const radius = 30;
+const radius = 50;
 
 // State management =====================================================
 const states: State[] = [];
@@ -117,11 +117,10 @@ function connectionMode(clickedState: State) {
 }
 
 function editMode(clickedState: State) {
-  console.log(clickedState);
+  selectedState = clickedState;
 
   const el = getElementById('state-name') as HTMLInputElement;
 
-  console.log(clickedState.data.name);
   el.value = clickedState.data.name;
 }
 
@@ -147,6 +146,11 @@ function getElementById(id: string): HTMLElement | null {
   return document.getElementById(id);
 }
 
+function saveSate() {
+  const el = getElementById('state-name') as HTMLInputElement;
+  selectedState!.data.name = el.value;
+}
+
 // Render functions =====================================================
 
 function render(): void {
@@ -158,7 +162,7 @@ function drawCanvas(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Draw connections first
-  states.forEach((state) => state.drawConnections());
+  states.forEach((state) => state?.drawConnections());
 
   // Draw states
   states.forEach((state) => state.draw());
@@ -178,6 +182,14 @@ getElementById('addState')!.addEventListener('click', () => {
 // Edit Mode listener
 getElementById('editState')!.addEventListener('click', () => {
   isEditing = !isEditing;
+
+  if (isEditing) {
+    getElementById('save-state-name')?.addEventListener('click', saveSate);
+  } else {
+    selectedState = null;
+    getElementById('save-state-name')?.removeEventListener('click', saveSate);
+  }
+
   isConnecting = false;
 });
 

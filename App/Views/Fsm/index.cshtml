@@ -1,7 +1,7 @@
 <div class="container-fluid">
     <div class="row">
         <!-- Left Column: FSM Editor -->
-        <div class="col-md-8">
+        <div class="col-md-6">
             <div id="fsm-editor-container" class="fsm-editor">
                 <div id="controls" class="mb-3">
                     <button id="addState" class="btn btn-primary">Add State</button>
@@ -9,15 +9,14 @@
                     <button id="connectStates" class="btn btn-success">Connect States</button>
                     <button id="clearCanvas" class="btn btn-danger">Clear Canvas</button>
                 </div>
-                <canvas id="fsmCanvas" width="800" height="600" class="w-100"></canvas>
+                <canvas id="fsmCanvas" width="1000" height="1000" class=""></canvas>
             </div>
         </div>
 
         <!-- Right Column: Form Panel -->
-        <div class="col-md-4">
-            <div class="fsm-state-form-container card p-3 shadow">
+        <div class="col-md-6">
+            <div class="fsm-state-form-container card p-3 shadow mb-4">
                 <div id="existing-triggers">
-
                 </div>
                 <div class="mb-3">
                     <label for="trigger-input" class="form-label">Add Trigger</label>
@@ -29,10 +28,9 @@
 
             <div class="fsm-state-form-container card p-3 shadow">
                 <div id="edit-state-form">
-
                 </div>
                 <div class="mb-3">
-                    <label for="state-name" class="form-label">Edit StateName</label>
+                    <label for="state-name" class="form-label">Edit State Name</label>
                     <input name="state-name" id="state-name" type="text" class="form-control"
                         placeholder="State name...">
                 </div>
@@ -41,6 +39,7 @@
         </div>
     </div>
 </div>
+
 
 <script src="~/dist/js/tools/fsme.js"></script>
 
