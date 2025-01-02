@@ -111,7 +111,7 @@ export function InitISM<Type>(
   return ISM;
 }
 
-export class IInputStorageManagerLocal<Type>
+export class InputStorageManagerLocal<Type>
   implements IInputStorageManagerLocal<Type>
 {
   private readonly P1localInputStore: Array<Type>;
@@ -122,16 +122,16 @@ export class IInputStorageManagerLocal<Type>
     this.P2localInputStore = new Array<Type>(1000);
   }
 
-  StoreLocalInputForP1(input: Type, frame: number): void {
+  StoreLocalInputForP1(frame: number, input: Type): void {
     this.P1localInputStore[frame] = input;
   }
 
-  StoreLocalInputForP2(input: Type, frame: number): void {
+  StoreLocalInputForP2(frame: number, input: Type): void {
     this.P2localInputStore[frame] = input;
   }
 
   GetP1LocalInputForFrame(frame: number): Type {
-    return this.GetP1LocalInputForFrame[frame];
+    return this.P1localInputStore[frame];
   }
   GetP2LocalInputForFrame(frame: number): Type {
     return this.P2localInputStore[frame];
@@ -139,8 +139,8 @@ export class IInputStorageManagerLocal<Type>
 }
 
 export interface IInputStorageManagerLocal<Type> {
-  StoreLocalInputForP1(input: Type, frame: number): void;
-  StoreLocalInputForP2(input: Type, frame: number): void;
+  StoreLocalInputForP1(frame: number, input: Type): void;
+  StoreLocalInputForP2(frame: number, input: Type): void;
   GetP1LocalInputForFrame(frame: number): Type;
   GetP2LocalInputForFrame(frame: number): Type;
 }
