@@ -8,13 +8,16 @@ interface IGameEvents {
   sideAttcak: number;
   attack: number;
   idle: number;
-  run: number;
+  move: number;
+  moveFast: number;
   jump: number;
   grab: number;
   guard: number;
+  land: number;
 }
 
-export const Actions: IGameEvents = {
+export const GameEvents: IGameEvents = {
+  // user inputs
   upSpecial: 0,
   downSpecial: 1,
   sideSpecial: 2,
@@ -24,8 +27,11 @@ export const Actions: IGameEvents = {
   sideAttcak: 6,
   attack: 7,
   idle: 8,
-  run: 9,
-  jump: 10,
-  grab: 11,
-  guard: 12,
+  move: 9,
+  moveFast: 10,
+  jump: 11,
+  grab: 12,
+  guard: 13,
+  // engine events
+  land: 14,
 };

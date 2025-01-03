@@ -1,5 +1,5 @@
 import { InputStorageManagerLocal } from '../../JavaScript/game/engine/engine-state-management/Managers';
-import { Actions } from '../../JavaScript/game/events/events';
+import { GameEvents } from '../../JavaScript/game/events/events';
 import { InputAction, NewInputAction } from '../../JavaScript/game/loops/Input';
 
 test('input storage manager', () => {
@@ -7,11 +7,11 @@ test('input storage manager', () => {
 
   const firstInput = NewInputAction();
   const secondInput = NewInputAction();
-  secondInput.Action = Actions.jump;
+  secondInput.Action = GameEvents.jump;
 
   ism.StoreLocalInputForP1(0, firstInput);
   ism.StoreLocalInputForP1(1, secondInput);
 
-  expect(ism.GetP1LocalInputForFrame(0).Action).toBe(Actions.idle);
-  expect(ism.GetP1LocalInputForFrame(1).Action).toBe(Actions.jump);
+  expect(ism.GetP1LocalInputForFrame(0).Action).toBe(GameEvents.idle);
+  expect(ism.GetP1LocalInputForFrame(1).Action).toBe(GameEvents.jump);
 });

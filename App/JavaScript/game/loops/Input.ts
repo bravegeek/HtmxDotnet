@@ -1,4 +1,4 @@
-import { Actions } from '../events/events';
+import { GameEvents } from '../events/events';
 
 export type InputAction = {
   Action: number;
@@ -121,20 +121,20 @@ function transcribeInput(input: GamePadInput) {
     // Is it a special on the y axis?
     if (Math.abs(LYAxis) > Math.abs(LXAxis)) {
       if (LYAxis > 0) {
-        inputAction.Action = Actions.upSpecial;
+        inputAction.Action = GameEvents.upSpecial;
         return inputAction;
       }
-      inputAction.Action = Actions.downSpecial;
+      inputAction.Action = GameEvents.downSpecial;
       return inputAction;
     }
     // Is it a special on the x axis?
     if (LXAxis != 0) {
-      inputAction.Action = Actions.sideSpecial;
+      inputAction.Action = GameEvents.sideSpecial;
       return inputAction;
     }
 
     // It is a nuetral special
-    inputAction.Action = Actions.special;
+    inputAction.Action = GameEvents.special;
     return inputAction;
   }
 
@@ -143,25 +143,25 @@ function transcribeInput(input: GamePadInput) {
     // Y axis?
     if (Math.abs(LYAxis) > Math.abs(LXAxis)) {
       if (LYAxis > 0) {
-        inputAction.Action = Actions.upAttack;
+        inputAction.Action = GameEvents.upAttack;
         return inputAction;
       }
-      inputAction.Action = Actions.downAttack;
+      inputAction.Action = GameEvents.downAttack;
       return inputAction;
     }
 
     if (LXAxis != 0) {
-      inputAction.Action = Actions.sideAttcak;
+      inputAction.Action = GameEvents.sideAttcak;
       return inputAction;
     }
-    inputAction.Action = Actions.attack;
+    inputAction.Action = GameEvents.attack;
     return inputAction;
   }
 
   // Right stick was used
   // Right stick more horizontal than vertical
   if (Math.abs(RXAxis) > Math.abs(RYAxis)) {
-    inputAction.Action = Actions.sideAttcak;
+    inputAction.Action = GameEvents.sideAttcak;
     return inputAction;
   }
 
@@ -169,38 +169,39 @@ function transcribeInput(input: GamePadInput) {
   // Right stick more vertical than horrizontal
   if (Math.abs(RYAxis) > Math.abs(RXAxis)) {
     if (RYAxis > 0) {
-      inputAction.Action = Actions.upAttack;
+      inputAction.Action = GameEvents.upAttack;
       return inputAction;
     }
-    inputAction.Action = Actions.downAttack;
+    inputAction.Action = GameEvents.downAttack;
     return inputAction;
   }
 
   // Grab was pressed
   if (input.rb) {
-    inputAction.Action = Actions.grab;
+    inputAction.Action = GameEvents.grab;
     return inputAction;
   }
 
   // Guard was pressed
   if (input.rt || input.lt) {
-    inputAction.Action = Actions.guard;
+    inputAction.Action = GameEvents.guard;
     return inputAction;
   }
 
   // Jump was pressed
   if (input.jump) {
-    inputAction.Action = Actions.jump;
+    inputAction.Action = GameEvents.jump;
     return inputAction;
   }
 
   if (Math.abs(input.LXAxis) > 0) {
-    inputAction.Action = Actions.run;
+    inputAction.Action =
+      Math.abs(input.LXAxis) > 0.6 ? GameEvents.moveFast : GameEvents.move;
     return inputAction;
   }
 
   // Nothing was pressed
-  inputAction.Action = Actions.idle;
+  inputAction.Action = GameEvents.idle;
   return inputAction;
 }
 
@@ -231,7 +232,7 @@ function clampStick(x: number, y: number) {
 
 export function NewInputAction() {
   return {
-    Action: Actions.idle,
+    Action: GameEvents.idle,
     LXAxsis: 0,
     LYAxsis: 0,
     RXAxis: 0,
