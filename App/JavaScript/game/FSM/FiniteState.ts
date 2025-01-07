@@ -21,29 +21,30 @@ const STATES = {
 
 class StateRelation {
   readonly stateId: stateId = STATES.IDLE;
-  private inputStateMappings: ActionStateTranslations;
+  private inputStateMappings: ActionStateMappings;
   timeOutState?: stateId = undefined;
 
-  constructor(
-    stateId: stateId,
-    actionStateTranslations: ActionStateTranslations
-  ) {
+  constructor(stateId: stateId, actionStateTranslations: ActionStateMappings) {
     this.stateId = stateId;
     this.inputStateMappings = actionStateTranslations;
   }
 
-  getStateForInput(stateId: stateId) {
-    return this.inputStateMappings.translations.get(stateId);
+  getStateForInput(geId: gameEventId) {
+    return this.inputStateMappings.getMapping(geId);
   }
 }
 
-class ActionStateTranslations {
-  readonly translations = new Map<gameEventId, stateId>();
+class ActionStateMappings {
+  private readonly mappings = new Map<gameEventId, stateId>();
 
-  setTranslations(translations: { geId: gameEventId; sId: stateId }[]) {
-    translations.forEach((actSt) => {
-      this.translations.set(actSt.geId, actSt.sId);
+  setMappings(mappingsArray: { geId: gameEventId; sId: stateId }[]) {
+    mappingsArray.forEach((actSt) => {
+      this.mappings.set(actSt.geId, actSt.sId);
     });
+  }
+
+  getMapping(geId: gameEventId): stateId | undefined {
+    return this.mappings.get(geId);
   }
 }
 
@@ -95,56 +96,56 @@ function InitDashRelations(): StateRelation {
 }
 
 function InitIdleTranslations() {
-  const idleTranslations = new ActionStateTranslations();
-  idleTranslations.setTranslations([
+  const idleTranslations = new ActionStateMappings();
+  idleTranslations.setMappings([
     { geId: GameEvents.move, sId: STATES.START_WALK },
     { geId: GameEvents.moveFast, sId: STATES.DASH },
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
-    { geId: GameEvents.idle, sId: STATES.IDLE },
   ]);
 
   return idleTranslations;
 }
 
-function InitStartWalkTranslations(): ActionStateTranslations {
-  const startWalkTranslations = new ActionStateTranslations();
-  startWalkTranslations.setTranslations([
+function InitStartWalkTranslations(): ActionStateMappings {
+  const startWalkTranslations = new ActionStateMappings();
+  startWalkTranslations.setMappings([
     { geId: GameEvents.idle, sId: STATES.IDLE },
     { geId: GameEvents.moveFast, sId: STATES.DASH },
-    { geId: GameEvents.move, sId: STATES.START_WALK },
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
 
   return startWalkTranslations;
 }
 
-function InitWalkTranslations(): ActionStateTranslations {
-  const walkTranslations = new ActionStateTranslations();
-  walkTranslations.setTranslations([
+function InitWalkTranslations(): ActionStateMappings {
+  const walkTranslations = new ActionStateMappings();
+  walkTranslations.setMappings([
     { geId: GameEvents.idle, sId: STATES.IDLE },
-    { geId: GameEvents.move, sId: STATES.WALK },
-    { geId: GameEvents.moveFast, sId: STATES.WALK },
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
 
   return walkTranslations;
 }
 
-function InitDashTranslations(): ActionStateTranslations {
-  const dashTranslations = new ActionStateTranslations();
-  dashTranslations.setTranslations([
+function InitDashTranslations(): ActionStateMappings {
+  const dashTranslations = new ActionStateMappings();
+  dashTranslations.setMappings([
     { geId: GameEvents.idle, sId: STATES.IDLE },
-    { geId: GameEvents.move, sId: STATES.DASH },
-    { geId: GameEvents.moveFast, sId: STATES.DASH },
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
 
   return dashTranslations;
 }
 
-function InitJumpSquatTranslations(): ActionStateTranslations {
-  const jumpSquatTranslations = new ActionStateTranslations();
-  jumpSquatTranslations.setTranslations([]);
+function InitJumpSquatTranslations(): ActionStateMappings {
+  const jumpSquatTranslations = new ActionStateMappings();
 
   return jumpSquatTranslations;
+}
+
+function InitJumpRelations(): ActionStateMappings {
+  const jumpTranslations = new ActionStateMappings();
+  jumpTranslations.setMappings([{ geId: GameEvents.jump, sId: STATES.JUMP }]);
+
+  return jumpTranslations;
 }
