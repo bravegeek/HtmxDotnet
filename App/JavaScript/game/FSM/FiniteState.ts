@@ -12,15 +12,17 @@ const STATES = {
   WALK: 3 as stateId,
   DASH: 4 as stateId,
   DASH_TURN: 5 as stateId,
-  STOP_RUN: 6 as stateId,
-  STOP_RUN_TURN: 7 as stateId,
-  RUN: 8 as stateId,
-  JUMPSQUAT: 9 as stateId,
-  JUMP: 10 as stateId,
-  NFALL: 11 as stateId,
-  FFALL: 12 as stateId,
-  LAND: 13 as stateId,
-  SOFTLAND: 14 as stateId,
+  STOP_DASH: 6 as stateId,
+  STOP_RUN: 7 as stateId,
+  RUN_TURN: 8 as stateId,
+  STOP_RUN_TURN: 9 as stateId,
+  RUN: 10 as stateId,
+  JUMPSQUAT: 11 as stateId,
+  JUMP: 12 as stateId,
+  NFALL: 13 as stateId,
+  FFALL: 14 as stateId,
+  LAND: 15 as stateId,
+  SOFTLAND: 16 as stateId,
 };
 
 class StateRelation {
@@ -108,10 +110,15 @@ export class FSMState {
 
 // STATE RELATIONS ===================================================
 
-const IDLE_STATE_RELATIONS = InitIdleRelations();
-const START_WALK_RELATIONS = InitStartWalkRelations();
-const TURN_WALK_RELATIONS = InitTurnWalkRelations();
-const DASH_RELATIONS = InitDashRelations();
+export const IDLE_STATE_RELATIONS = InitIdleRelations();
+export const START_WALK_RELATIONS = InitStartWalkRelations();
+export const TURN_WALK_RELATIONS = InitTurnWalkRelations();
+export const WALK_TRANSLATIONS = InitWalkRelations();
+export const DASH_RELATIONS = InitDashRelations();
+export const DASH_TURN_RELATIONS = InitDashTurnRelations();
+export const STOP_DASH_RELATIONS = InitStopDashRelations();
+
+// ====================================================================
 
 function InitIdleRelations(): StateRelation {
   const idle = new StateRelation(STATES.IDLE, InitIdleTranslations());
@@ -144,6 +151,50 @@ function InitDashRelations(): StateRelation {
 
   return dashRelations;
 }
+
+function InitDashTurnRelations(): StateRelation {
+  const dashTurnRelations = new StateRelation(
+    STATES.DASH_TURN,
+    InitDashTrunTranslations()
+  );
+
+  return dashTurnRelations;
+}
+
+function InitStopDashRelations(): StateRelation {
+  const stopDashRelations = new StateRelation(
+    STATES.STOP_DASH,
+    InitStopDashTranslations()
+  );
+
+  return stopDashRelations;
+}
+
+function InitRunRelations(): StateRelation {
+  const runRelations = new StateRelation(STATES.RUN, InitRunTranslations());
+
+  return runRelations;
+}
+
+function InitRunTurnRelations(): StateRelation {
+  const runTurnRelations = new StateRelation(
+    STATES.RUN_TURN,
+    InitRunTurnTranslations()
+  );
+
+  return runTurnRelations;
+}
+
+function InitStopRunRelations(): StateRelation {
+  const stopRunRelations = new StateRelation(
+    STATES.STOP_RUN,
+    InitStopRunTranslations()
+  );
+
+  return stopRunRelations;
+}
+
+// ================================================================================
 
 function InitIdleTranslations() {
   const idleTranslations = new ActionStateMappings();
@@ -205,6 +256,28 @@ function InitDashTranslations(): ActionStateMappings {
   return dashTranslations;
 }
 
+function InitDashTrunTranslations(): ActionStateMappings {
+  const dashTrunTranslations = new ActionStateMappings();
+  dashTrunTranslations.setMappings([
+    { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
+  ]);
+
+  dashTrunTranslations._setDefault(STATES.DASH);
+
+  return dashTrunTranslations;
+}
+
+function InitStopDashTranslations(): ActionStateMappings {
+  const stopDashTranslations = new ActionStateMappings();
+  stopDashTranslations.setMappings([
+    { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
+  ]);
+
+  stopDashTranslations._setDefault(STATES.IDLE);
+
+  return stopDashTranslations;
+}
+
 function InitRunTranslations(): ActionStateMappings {
   const runTranslations = new ActionStateMappings();
   runTranslations.setMappings([
@@ -216,8 +289,32 @@ function InitRunTranslations(): ActionStateMappings {
   return runTranslations;
 }
 
+function InitRunTurnTranslations(): ActionStateMappings {
+  const runTurnTranslations = new ActionStateMappings();
+  runTurnTranslations.setMappings([
+    { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
+  ]);
+
+  runTurnTranslations._setDefault(STATES.STOP_RUN_TURN);
+
+  return runTurnTranslations;
+}
+
+function InitStopRunTranslations(): ActionStateMappings {
+  const stopRunTranslations = new ActionStateMappings();
+  stopRunTranslations.setMappings([
+    { geId: GameEvents.moveFast, sId: STATES.RUN },
+    { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
+  ]);
+
+  stopRunTranslations._setDefault(STATES.IDLE);
+
+  return stopRunTranslations;
+}
+
 function InitJumpSquatTranslations(): ActionStateMappings {
   const jumpSquatTranslations = new ActionStateMappings();
+
   jumpSquatTranslations._setDefault(STATES.JUMP);
 
   return jumpSquatTranslations;
@@ -226,6 +323,8 @@ function InitJumpSquatTranslations(): ActionStateMappings {
 function InitJumpTranslations(): ActionStateMappings {
   const jumpTranslations = new ActionStateMappings();
   jumpTranslations.setMappings([{ geId: GameEvents.jump, sId: STATES.JUMP }]);
+
+  jumpTranslations._setDefault(STATES.NFALL);
 
   return jumpTranslations;
 }

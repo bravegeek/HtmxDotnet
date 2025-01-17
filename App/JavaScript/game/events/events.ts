@@ -1,5 +1,4 @@
 interface IGameEvents {
-  //user inputs
   upSpecial: number;
   downSpecial: number;
   sideSpecial: number;
@@ -18,6 +17,7 @@ interface IGameEvents {
   turn: number;
   // engin events
   land: number;
+  softLand: number;
 }
 
 export const GameEvents: IGameEvents = {
@@ -40,4 +40,5 @@ export const GameEvents: IGameEvents = {
   turn: 14,
   // engine events
   land: 15,
+  softLand: 16,
 };
