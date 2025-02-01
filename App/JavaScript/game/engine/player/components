@@ -1,0 +1,288 @@
+import { FlatVec } from './../physics/vector';
+import { FillArrayWithFlatVec } from './../utils';
+
+// Player Components
+export class Position {
+  public readonly Pos: FlatVec;
+
+  constructor(flatVec: FlatVec | undefined = undefined) {
+    if (flatVec == undefined) {
+      this.Pos = new FlatVec(0, 0);
+    }
+  }
+}
+
+export class VelocityComponent {
+  public readonly Vel: FlatVec;
+
+  constructor() {
+    this.Vel = new FlatVec(0, 0);
+  }
+
+  public AddCalmpedXImpulse(clamp: number, x: number) {
+    const upperBound = Math.abs(clamp);
+    const lowerBound = -Math.abs(clamp);
+    const pvx = this.Vel.X;
+
+    if (x > 0 && pvx < upperBound) {
+      this.Vel.X += Math.min(x, upperBound - pvx);
+      return;
+    }
+
+    if (x < 0 && pvx > lowerBound) {
+      this.Vel.X += Math.max(x, lowerBound - pvx);
+      return;
+    }
+  }
+}
+
+export class SpeedsComponent {
+  public readonly GroundedVelocityDecay: number;
+  public readonly AerialVelocityDecay: number;
+  public readonly AerialSpeedInpulseLimit: number;
+  public readonly MaxWalkSpeed: number;
+  public readonly MaxRunSpeed: number;
+  public readonly WalkSpeedMulitplier: number;
+  public readonly RunSpeedMultiplier: number;
+  public readonly FastFallSpeed: number;
+  public readonly FallSpeed: number;
+
+  constructor(
+    grndSpeedVelDecay: number,
+    aerialVelocityDecay: number,
+    aerialSpeedInpulseLimit: number,
+    maxWalkSpeed: number,
+    maxRunSpeed: number,
+    walkSpeedMultiplier: number,
+    runSpeedMultiplier: number,
+    fastFallSpeed: number,
+    fallSpeed: number
+  ) {
+    this.GroundedVelocityDecay = grndSpeedVelDecay;
+    this.AerialVelocityDecay = aerialVelocityDecay;
+    this.AerialSpeedInpulseLimit = aerialSpeedInpulseLimit;
+    this.MaxWalkSpeed = maxWalkSpeed;
+    this.MaxRunSpeed = maxRunSpeed;
+    this.WalkSpeedMulitplier = walkSpeedMultiplier;
+    this.RunSpeedMultiplier = runSpeedMultiplier;
+    this.FastFallSpeed = fastFallSpeed;
+    this.FallSpeed = fallSpeed;
+  }
+}
+
+export class PlayerFlagsComponent {
+  private FacingRight = false;
+  private Grounded: boolean = false;
+  private InLedgeGrab: boolean = false;
+  private Gravity: boolean = true;
+
+  FaceRight(): void {
+    this.FacingRight = true;
+  }
+
+  FaceLeft(): void {
+    this.FacingRight = false;
+  }
+
+  IsFacingRight(): boolean {
+    return this.FacingRight;
+  }
+
+  IsFacingLeft(): boolean {
+    return !this.IsFacingRight();
+  }
+
+  Ground(): void {
+    this.Grounded = true;
+  }
+
+  Unground(): void {
+    this.Grounded = false;
+  }
+
+  IsGrounded(): boolean {
+    return this.Grounded;
+  }
+
+  GrabLedge() {
+    this.InLedgeGrab = true;
+  }
+
+  UnGrabLedge() {
+    this.InLedgeGrab = false;
+  }
+
+  IsInLedgeGrab(): boolean {
+    return this.InLedgeGrab;
+  }
+
+  TurnOffGavity() {
+    this.Gravity = false;
+  }
+
+  TurnOnGravity() {
+    this.Gravity = true;
+  }
+
+  IsGravityOn(): boolean {
+    return this.Gravity;
+  }
+}
+
+export class ECBComponent {
+  private Position: FlatVec = new FlatVec(0, 0);
+  private Height: number;
+  private Width: number;
+  private YOffset: number;
+  private Verts = new Array<FlatVec>(4);
+  private Color: string;
+
+  constructor(height: number = 100, width: number = 100, yOffset: number = 0) {
+    this.Color = 'orange';
+    this.Height = height;
+    this.Width = width;
+    this.YOffset = yOffset;
+    FillArrayWithFlatVec(this.Verts);
+    this.Update();
+  }
+
+  public MoveToPosition(x: number, y: number) {
+    this.Position.X = x;
+    this.Position.Y = y;
+    this.Update();
+  }
+
+  Update(): void {
+    const px = this.Position.X;
+    const py = this.Position.Y;
+    const height = this.Height;
+    const width = this.Width;
+    const yOffset = this.YOffset;
+
+    const bottomX = px;
+    const bottomY = py + yOffset;
+
+    const topX = px;
+    const topY = bottomY + height;
+
+    const leftX = bottomX + -(width / 2);
+    const leftY = bottomY + height / 2;
+
+    const rightX = bottomX + width / 2;
+    const rightY = leftY;
+
+    this.Verts[0].X = topX;
+    this.Verts[0].Y = topY;
+
+    this.Verts[1].X = rightX;
+    this.Verts[1].Y = rightY;
+
+    this.Verts[2].X = bottomX;
+    this.Verts[2].Y = bottomY;
+
+    this.Verts[3].X = leftX;
+    this.Verts[3].Y = leftY;
+  }
+
+  Top(): FlatVec {
+    return this.Verts[0];
+  }
+
+  Right(): FlatVec {
+    return this.Verts[1];
+  }
+
+  Bottom(): FlatVec {
+    return this.Verts[2];
+  }
+
+  Left(): FlatVec {
+    return this.Verts[3];
+  }
+
+  GetColor(): string {
+    return this.Color;
+  }
+
+  SetColor(color: string): void {
+    this.Color = color;
+  }
+
+  public GetVerticies() {
+    return this.Verts;
+  }
+}
+
+export class JumpComponent {
+  public readonly JumpVelocity: number;
+  private readonly NumberOfJumps: number = 2;
+  private JumpCount: number = 0;
+
+  constructor(jumpVelocity: number, numberOfJumps: number = 2) {
+    this.JumpVelocity = jumpVelocity;
+    this.NumberOfJumps = numberOfJumps;
+  }
+
+  CanJump() {
+    return this.JumpCount < this.NumberOfJumps;
+  }
+
+  IncrementJumps() {
+    this.JumpCount++;
+  }
+
+  ResetJumps() {
+    this.JumpCount = 0;
+  }
+}
+
+// builder ================================================
+
+export class SpeedsComponentBuilder {
+  private GroundedVelocityDecay: number;
+  private AerialVelocityDecay: number;
+  private AerialSpeedInpulseLimit: number;
+  private MaxWalkSpeed: number;
+  private MaxRunSpeed: number;
+  private WalkSpeedMulitplier: number;
+  private RunSpeedMultiplier: number;
+  private FastFallSpeed: number;
+  private FallSpeed: number;
+
+  SetAerialSpeeds(
+    aerialVelocityDecay: number,
+    aerialSpeedImpulseLimit: number
+  ) {
+    this.AerialVelocityDecay = aerialVelocityDecay;
+    this.AerialSpeedInpulseLimit = aerialSpeedImpulseLimit;
+  }
+
+  SetFallSpeeds(fastFallSpeed: number, fallSpeed: number) {
+    this.FallSpeed = fallSpeed;
+    this.FastFallSpeed = fastFallSpeed;
+  }
+
+  SetWalkSpeeds(maxWalkSpeed: number, walkSpeedMultiplier: number) {
+    this.MaxWalkSpeed = maxWalkSpeed;
+    this.WalkSpeedMulitplier = walkSpeedMultiplier;
+  }
+
+  SetRunSpeeds(maxRunSpeed: number, runSpeedMultiplier: number) {
+    this.RunSpeedMultiplier = runSpeedMultiplier;
+    this.MaxRunSpeed = maxRunSpeed;
+  }
+
+  Build() {
+    return new SpeedsComponent(
+      this.GroundedVelocityDecay,
+      this.AerialVelocityDecay,
+      this.AerialSpeedInpulseLimit,
+      this.MaxWalkSpeed,
+      this.MaxRunSpeed,
+      this.WalkSpeedMulitplier,
+      this.RunSpeedMultiplier,
+      this.FastFallSpeed,
+      this.FallSpeed
+    );
+  }
+}

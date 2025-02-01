@@ -5,7 +5,7 @@ import { GameEvents } from '../events/events';
 type gameEventId = number;
 type stateId = number;
 
-const STATES = {
+export const STATES = {
   IDLE: 0 as stateId,
   START_WALK: 1 as stateId,
   TURN: 2 as stateId,
@@ -27,15 +27,11 @@ const STATES = {
 
 class StateRelation {
   readonly stateId: stateId = STATES.IDLE;
-  private inputStateMappings: ActionStateMappings;
+  readonly mappings: ActionStateMappings;
 
   constructor(stateId: stateId, actionStateTranslations: ActionStateMappings) {
     this.stateId = stateId;
-    this.inputStateMappings = actionStateTranslations;
-  }
-
-  getStateForInput(geId: gameEventId) {
-    return this.inputStateMappings.getMapping(geId);
+    this.mappings = actionStateTranslations;
   }
 }
 
@@ -43,7 +39,7 @@ class ActionStateMappings {
   private readonly mappings = new Map<gameEventId, stateId>();
   private defaultSate?: stateId;
 
-  setMappings(mappingsArray: { geId: gameEventId; sId: stateId }[]) {
+  _setMappings(mappingsArray: { geId: gameEventId; sId: stateId }[]) {
     mappingsArray.forEach((actSt) => {
       this.mappings.set(actSt.geId, actSt.sId);
     });
@@ -112,11 +108,15 @@ export class FSMState {
 
 export const IDLE_STATE_RELATIONS = InitIdleRelations();
 export const START_WALK_RELATIONS = InitStartWalkRelations();
-export const TURN_WALK_RELATIONS = InitTurnWalkRelations();
-export const WALK_TRANSLATIONS = InitWalkRelations();
+export const TURN_RELATIONS = InitTurnWalkRelations();
+export const WALK_RELATIONS = InitWalkRelations();
 export const DASH_RELATIONS = InitDashRelations();
 export const DASH_TURN_RELATIONS = InitDashTurnRelations();
 export const STOP_DASH_RELATIONS = InitStopDashRelations();
+export const RUN_RELATIONS = InitRunRelations();
+export const RUN_TURN_RELATIONS = InitRunTurnRelations();
+export const RUN_STOP_RELATIONS = InitStopRunRelations();
+export const JUMP_SQUAT_RELATIONS = InitJumpSquatRelations();
 
 // ====================================================================
 
@@ -194,11 +194,26 @@ function InitStopRunRelations(): StateRelation {
   return stopRunRelations;
 }
 
+function InitJumpSquatRelations(): StateRelation {
+  const jumpSquatRelations = new StateRelation(
+    STATES.JUMPSQUAT,
+    InitJumpSquatTranslations()
+  );
+
+  return jumpSquatRelations;
+}
+
+function InitJumpRelations(): StateRelation {
+  const jumpRelations = new StateRelation(STATES.JUMP, InitJumpTranslations());
+
+  return jumpRelations;
+}
+
 // ================================================================================
 
 function InitIdleTranslations() {
   const idleTranslations = new ActionStateMappings();
-  idleTranslations.setMappings([
+  idleTranslations._setMappings([
     { geId: GameEvents.move, sId: STATES.START_WALK },
     { geId: GameEvents.moveFast, sId: STATES.DASH },
     { geId: GameEvents.turn, sId: STATES.TURN },
@@ -210,7 +225,7 @@ function InitIdleTranslations() {
 
 function InitStartWalkTranslations(): ActionStateMappings {
   const startWalkTranslations = new ActionStateMappings();
-  startWalkTranslations.setMappings([
+  startWalkTranslations._setMappings([
     { geId: GameEvents.idle, sId: STATES.IDLE },
     { geId: GameEvents.moveFast, sId: STATES.DASH },
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
@@ -223,7 +238,7 @@ function InitStartWalkTranslations(): ActionStateMappings {
 
 function InitTurnTranslations(): ActionStateMappings {
   const turnTranslations = new ActionStateMappings();
-  turnTranslations.setMappings([
+  turnTranslations._setMappings([
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
 
@@ -234,7 +249,7 @@ function InitTurnTranslations(): ActionStateMappings {
 
 function InitWalkTranslations(): ActionStateMappings {
   const walkTranslations = new ActionStateMappings();
-  walkTranslations.setMappings([
+  walkTranslations._setMappings([
     { geId: GameEvents.idle, sId: STATES.IDLE },
     { geId: GameEvents.turn, sId: STATES.TURN },
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
@@ -245,8 +260,8 @@ function InitWalkTranslations(): ActionStateMappings {
 
 function InitDashTranslations(): ActionStateMappings {
   const dashTranslations = new ActionStateMappings();
-  dashTranslations.setMappings([
-    { geId: GameEvents.idle, sId: STATES.STOP_RUN },
+  dashTranslations._setMappings([
+    { geId: GameEvents.idle, sId: STATES.STOP_DASH },
     { geId: GameEvents.turn, sId: STATES.DASH_TURN },
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
@@ -258,7 +273,7 @@ function InitDashTranslations(): ActionStateMappings {
 
 function InitDashTrunTranslations(): ActionStateMappings {
   const dashTrunTranslations = new ActionStateMappings();
-  dashTrunTranslations.setMappings([
+  dashTrunTranslations._setMappings([
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
 
@@ -269,7 +284,7 @@ function InitDashTrunTranslations(): ActionStateMappings {
 
 function InitStopDashTranslations(): ActionStateMappings {
   const stopDashTranslations = new ActionStateMappings();
-  stopDashTranslations.setMappings([
+  stopDashTranslations._setMappings([
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
 
@@ -280,10 +295,10 @@ function InitStopDashTranslations(): ActionStateMappings {
 
 function InitRunTranslations(): ActionStateMappings {
   const runTranslations = new ActionStateMappings();
-  runTranslations.setMappings([
+  runTranslations._setMappings([
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
     { geId: GameEvents.idle, sId: STATES.STOP_RUN },
-    { geId: GameEvents.turn, sId: STATES.STOP_RUN_TURN },
+    { geId: GameEvents.turn, sId: STATES.RUN_TURN },
   ]);
 
   return runTranslations;
@@ -291,7 +306,7 @@ function InitRunTranslations(): ActionStateMappings {
 
 function InitRunTurnTranslations(): ActionStateMappings {
   const runTurnTranslations = new ActionStateMappings();
-  runTurnTranslations.setMappings([
+  runTurnTranslations._setMappings([
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
 
@@ -302,7 +317,7 @@ function InitRunTurnTranslations(): ActionStateMappings {
 
 function InitStopRunTranslations(): ActionStateMappings {
   const stopRunTranslations = new ActionStateMappings();
-  stopRunTranslations.setMappings([
+  stopRunTranslations._setMappings([
     { geId: GameEvents.moveFast, sId: STATES.RUN },
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
@@ -322,7 +337,7 @@ function InitJumpSquatTranslations(): ActionStateMappings {
 
 function InitJumpTranslations(): ActionStateMappings {
   const jumpTranslations = new ActionStateMappings();
-  jumpTranslations.setMappings([{ geId: GameEvents.jump, sId: STATES.JUMP }]);
+  jumpTranslations._setMappings([{ geId: GameEvents.jump, sId: STATES.JUMP }]);
 
   jumpTranslations._setDefault(STATES.NFALL);
 

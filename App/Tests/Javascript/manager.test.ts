@@ -15,3 +15,5 @@ test('input storage manager', () => {
   expect(ism.GetP1LocalInputForFrame(0).Action).toBe(GameEvents.idle);
   expect(ism.GetP1LocalInputForFrame(1).Action).toBe(GameEvents.jump);
 });
+
+// npx jest

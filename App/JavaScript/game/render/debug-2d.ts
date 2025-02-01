@@ -24,6 +24,8 @@ export type resolution = {
 };
 
 export class RenderData {
-  frame: number;
-  frameTime: number;
+  frame: number = 0;
+  frameTime: number = 0;
+
+  constructor() {}
 }
