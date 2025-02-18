@@ -25,6 +25,10 @@ type ProjectionResult = {
   max: number;
 };
 
+export function ZERO_CR_POOL() {
+  crp.zero();
+}
+
 export function IntersectsPolygons(
   verticiesA: Array<FlatVec>,
   verticiesB: Array<FlatVec>

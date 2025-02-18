@@ -38,6 +38,10 @@ export class VecResultPool {
 export interface IVecResultDto {
   GetX(): number;
   GetY(): number;
+  _setX(x: number): void;
+  _addToX(x: number): void;
+  _addToY(y: number): void;
+  _setY(y: number): void;
   _setXY(x: number, y: number): void;
   _zero(): void;
 }
@@ -50,21 +54,35 @@ class VecResultDto implements IVecResultDto {
     this.ResX = x;
     this.ResY = y;
   }
+  _addToX(x: number): void {
+    this.ResX += x;
+  }
+  _addToY(y: number): void {
+    this.ResY += y;
+  }
 
-  GetX() {
+  GetX(): number {
     return this.ResX;
   }
 
-  GetY() {
+  GetY(): number {
     return this.ResY;
   }
 
-  _setXY(x: number, y: number) {
+  _setX(x: number): void {
+    this.ResX = x;
+  }
+
+  _setY(y: number): void {
+    this.ResY = y;
+  }
+
+  _setXY(x: number, y: number): void {
     this.ResX = x;
     this.ResY = y;
   }
 
-  _zero() {
+  _zero(): void {
     this._setXY(0, 0);
   }
 }

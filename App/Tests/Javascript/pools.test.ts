@@ -1,6 +1,6 @@
 import { VecResultPool } from '../../JavaScript/game/pools/VecResultPool';
 
-test('Pools Test 1', () => {
+test('VecResultPool Test', () => {
   const SUT = new VecResultPool(1000);
   const result = SUT.Rent();
 

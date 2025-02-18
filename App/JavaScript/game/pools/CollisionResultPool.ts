@@ -41,6 +41,7 @@ export class CollisionResultPool {
 export interface ICollisionResult {
   _setCollisionTrue(normal: IVecResultDto, depth: number): void;
   _setCollisionFalse(): void;
+  normal: IVecResultDto;
   get collision(): boolean;
   get depth(): number;
 }
