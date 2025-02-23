@@ -86,10 +86,7 @@ export class SpeedsComponent {
 }
 
 export class PlayerFlagsComponent {
-  private RightWallRidding: boolean = false;
-  private LeftWallRidding: boolean = false;
   private FacingRight: boolean = false;
-  private Grounded: boolean = false;
   private InLedgeGrab: boolean = false;
   private Gravity: boolean = true;
   private FastFalling: boolean = false;
@@ -112,22 +109,6 @@ export class PlayerFlagsComponent {
     return !this.IsFacingRight();
   }
 
-  Ground(): void {
-    this.Grounded = true;
-    this.InLedgeGrab = false;
-    this.FastFalling = false;
-    this.LeftWallRidding = false;
-    this.RightWallRidding = false;
-  }
-
-  Unground(): void {
-    this.Grounded = false;
-  }
-
-  IsGrounded(): boolean {
-    return this.Grounded;
-  }
-
   FastFall(): void {
     this.FastFalling = true;
   }
@@ -138,10 +119,7 @@ export class PlayerFlagsComponent {
 
   GrabLedge() {
     this.InLedgeGrab = true;
-    this.Grounded = false;
     this.FastFalling = false;
-    this.LeftWallRidding = false;
-    this.RightWallRidding = false;
   }
 
   UnGrabLedge() {
@@ -168,8 +146,6 @@ export class PlayerFlagsComponent {
     this.Running = true;
     this.Walking = false;
     this.FastFalling = false;
-    this.LeftWallRidding = false;
-    this.RightWallRidding = false;
     this.InLedgeGrab = false;
   }
 
@@ -181,8 +157,6 @@ export class PlayerFlagsComponent {
     this.Walking = true;
     this.Running = false;
     this.FastFalling = false;
-    this.LeftWallRidding = false;
-    this.RightWallRidding = false;
     this.InLedgeGrab = false;
   }
 
@@ -196,42 +170,6 @@ export class PlayerFlagsComponent {
 
   IsRunning(): boolean {
     return this.Running;
-  }
-
-  SetRightWallRiddingFalse(): void {
-    this.RightWallRidding = false;
-  }
-
-  SetLeftWallRiddingFalse(): void {
-    this.LeftWallRidding = false;
-  }
-
-  SetRightWallRiddingTrue(): void {
-    this.RightWallRidding = true;
-    this.LeftWallRidding = false;
-    this.FacingRight = false;
-    this.FastFalling = false;
-    this.Running = false;
-    this.Walking = false;
-    this.InLedgeGrab = false;
-  }
-
-  SetLeftWallRiddingTrue(): void {
-    this.LeftWallRidding = true;
-    this.RightWallRidding = false;
-    this.FacingRight = true;
-    this.FastFalling = false;
-    this.Running = false;
-    this.Walking = false;
-    this.InLedgeGrab = false;
-  }
-
-  IsRightWallRidding(): boolean {
-    return this.RightWallRidding;
-  }
-
-  IsLeftWallRidding(): boolean {
-    return this.LeftWallRidding;
   }
 }
 

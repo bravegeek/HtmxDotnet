@@ -35,51 +35,53 @@ export class VecResultPool {
   }
 }
 
-export interface IVecResultDto {
-  GetX(): number;
-  GetY(): number;
+export interface IVecResult {
+  get X(): number;
+  get Y(): number;
+  AddToX(x: number): void;
+  AddToY(y: number): void;
   _setX(x: number): void;
-  _addToX(x: number): void;
-  _addToY(y: number): void;
   _setY(y: number): void;
   _setXY(x: number, y: number): void;
   _zero(): void;
 }
 
-class VecResultDto implements IVecResultDto {
-  private ResX: number;
-  private ResY: number;
+class VecResultDto implements IVecResult {
+  private _x: number;
+  private _y: number;
 
   constructor(x: number = 0, y: number = 0) {
-    this.ResX = x;
-    this.ResY = y;
-  }
-  _addToX(x: number): void {
-    this.ResX += x;
-  }
-  _addToY(y: number): void {
-    this.ResY += y;
+    this._x = x;
+    this._y = y;
   }
 
-  GetX(): number {
-    return this.ResX;
+  AddToX(x: number): void {
+    this._x += x;
   }
 
-  GetY(): number {
-    return this.ResY;
+  AddToY(y: number): void {
+    this._y += y;
+  }
+
+  get X(): number {
+    return this._x;
+  }
+
+  get Y(): number {
+    return this._y;
   }
 
   _setX(x: number): void {
-    this.ResX = x;
+    this._x = x;
   }
 
   _setY(y: number): void {
-    this.ResY = y;
+    this._y = y;
   }
 
   _setXY(x: number, y: number): void {
-    this.ResX = x;
-    this.ResY = y;
+    this._x = x;
+    this._y = y;
   }
 
   _zero(): void {

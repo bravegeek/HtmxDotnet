@@ -4,10 +4,10 @@ export function defaultStage() {
   const sv = new StageVerticies();
   const sl = new Ledges(sv.GetGround()[0], sv.GetGround()[1]);
 
-  return new StageOrchestrator(sv, sl);
+  return new Stage(sv, sl);
 }
 
-export class StageOrchestrator {
+export class Stage {
   public StageVerticies: StageVerticies;
   public Ledges: Ledges;
 

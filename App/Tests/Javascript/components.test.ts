@@ -1,6 +1,6 @@
 import {
   FlatVec,
-  ZERO_POOL,
+  ZERO_VR_POOL,
 } from '../../JavaScript/game/engine/physics/vector';
 import {
   ECBComponent,
@@ -11,7 +11,7 @@ import {
 import { defaultStage } from '../../JavaScript/game/engine/stage/stageComponents';
 
 beforeEach(() => {
-  ZERO_POOL();
+  ZERO_VR_POOL();
 });
 
 // ECBComponent tests ========================================================
@@ -214,15 +214,6 @@ test('PlayerFlagsComponent Should Set Flags', () => {
   expect(SUT.IsFacingRight()).toBeFalsy();
 
   //ground tests
-  expect(SUT.IsGrounded()).toBeFalsy();
-
-  SUT.Ground();
-
-  expect(SUT.IsGrounded()).toBeTruthy();
-
-  SUT.Unground();
-
-  expect(SUT.IsGrounded()).toBeFalsy();
 
   //ledge grab tests
   expect(SUT.IsInLedgeGrab()).toBeFalsy();

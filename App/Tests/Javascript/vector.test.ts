@@ -3,7 +3,7 @@ import {
   SET_POOL,
   VectorAdder,
   VectorResultAllocator,
-  ZERO_POOL,
+  ZERO_VR_POOL,
 } from '../../JavaScript/game/engine/physics/vector';
 import { VecResultPool } from '../../JavaScript/game/pools/VecResultPool';
 
@@ -19,14 +19,14 @@ test('vec library pool test', () => {
 
   const result = VectorAdder(vt1, vt2);
 
-  update.X = result.GetX();
-  update.Y = result.GetY();
+  update.X = result.X;
+  update.Y = result.Y;
 
-  expect(result.GetX()).toBe(4);
-  expect(result.GetY()).toBe(6);
+  expect(result.X).toBe(4);
+  expect(result.Y).toBe(6);
 
-  ZERO_POOL();
+  ZERO_VR_POOL();
 
-  expect(result.GetX()).toBe(0);
-  expect(result.GetY()).toBe(0);
+  expect(result.X).toBe(0);
+  expect(result.Y).toBe(0);
 });

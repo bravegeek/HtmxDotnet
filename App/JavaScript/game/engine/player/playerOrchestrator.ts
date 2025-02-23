@@ -1,4 +1,6 @@
 import { FlatVec } from '../physics/vector';
+import { Stage } from '../stage/stageComponents';
+import { World } from '../world/world';
 import {
   ECBComponent,
   JumpComponent,
@@ -21,9 +23,11 @@ const defaultSpeedsBuilderOptions: speedBuilderOptions = (
 };
 
 export class Player {
+  private _world?: World;
+
   private readonly Position: PositionComponent;
   private readonly Velocity: VelocityComponent;
-  public readonly Flags: PlayerFlagsComponent;
+  private readonly Flags: PlayerFlagsComponent;
   private readonly Speeds: SpeedsComponent;
   private readonly ECB: ECBComponent;
   private readonly Jump: JumpComponent;
@@ -40,9 +44,13 @@ export class Player {
     this.Jump = new JumpComponent(20, 2);
   }
 
+  public SetWorld(world: World) {
+    this._world = world;
+  }
+
   // This method is for inputs from the player
   public AddXImpulse(impulse: number): void {
-    if (!this.Flags.IsGrounded()) {
+    if (!this.IsGrounded()) {
       this.Velocity.AddClampedXImpulse(
         impulse,
         this.Speeds.AerialSpeedInpulseLimit
@@ -76,6 +84,19 @@ export class Player {
 
   public SetYVelocity(vy: number): void {
     this.Velocity.Vel.Y = vy;
+  }
+
+  public IsGrounded(): boolean {
+    const grnd = this._world!.stage!.StageVerticies.GetGround();
+    const grndLength = grnd.length - 1;
+    for (let i = 0; i < grndLength; i++) {
+      const va = grnd[i];
+      const vb = grnd[i + 1];
+      if (this.ECB.DetectGroundCollision(va, vb)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public GetVerts(): FlatVec[] {

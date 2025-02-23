@@ -2,7 +2,11 @@ import {
   CollisionResultPool,
   ICollisionResult,
 } from '../../pools/CollisionResultPool';
-import { IVecResultDto } from '../../pools/VecResultPool';
+import {
+  IProjectionResult,
+  ProjectionResultPool,
+} from '../../pools/ProjectResultPool';
+import { IVecResult } from '../../pools/VecResultPool';
 import {
   DotProduct,
   FlatVec,
@@ -12,21 +16,16 @@ import {
   VectorSubtractor,
 } from './vector';
 
-// export type collisionResult = {
-//   collision: boolean;
-//   normal: IVecResultDto | null;
-//   depth: number | null;
-// };
-
 const crp = new CollisionResultPool(1000);
 
-type ProjectionResult = {
-  min: number;
-  max: number;
-};
+const prp = new ProjectionResultPool(1000);
 
 export function ZERO_CR_POOL() {
   crp.zero();
+}
+
+export function ZERO_PR_POOL() {
+  prp.zero();
 }
 
 export function IntersectsPolygons(
@@ -46,7 +45,7 @@ export function IntersectsPolygons(
     varDto._setXY(va.X, va.Y);
     vbrDto._setXY(vb.X, vb.Y);
     const edge = VectorSubtractor(vbrDto, varDto); // get the edge
-    let axis = VectorResultAllocator(-edge.GetY(), edge.GetX()); // get the axis
+    let axis = VectorResultAllocator(-edge.Y, edge.X); // get the axis
     axis = Normalize(axis);
     // Project verticies for both polygons.
     const vaProj = ProjectVerticies(verticiesA, axis);
@@ -79,7 +78,7 @@ export function IntersectsPolygons(
     varDto._setXY(va.X, va.Y);
     vbrDto._setXY(vb.X, vb.Y);
     const edge = VectorSubtractor(vbrDto, varDto); // get the edge
-    let axis = VectorResultAllocator(-edge.GetY(), edge.GetX()); // get the axis
+    let axis = VectorResultAllocator(-edge.Y, edge.X); // get the axis
     axis = Normalize(axis);
 
     // Project verticies for both polygons.
@@ -112,14 +111,14 @@ export function IntersectsPolygons(
   }
 
   const res = crp.Rent();
-  res._setCollisionTrue(normal, depth);
+  res._setCollisionTrue(normal.X, normal.Y, depth);
   return res;
   //return { collision: true, normal, depth } as collisionResult;
 }
 
 // suplimental functions ====================================
 
-function FindArithemticMean(verticies: Array<FlatVec>): IVecResultDto {
+function FindArithemticMean(verticies: Array<FlatVec>): IVecResult {
   let sumX = 0;
   let sumY = 0;
 
@@ -137,8 +136,8 @@ function FindArithemticMean(verticies: Array<FlatVec>): IVecResultDto {
 
 function ProjectVerticies(
   verticies: Array<FlatVec>,
-  axis: IVecResultDto
-): ProjectionResult {
+  axis: IVecResult
+): IProjectionResult {
   let min = Number.MAX_SAFE_INTEGER;
   let max = Number.MIN_SAFE_INTEGER;
 
@@ -159,5 +158,7 @@ function ProjectVerticies(
     }
   }
 
-  return { min, max } as ProjectionResult;
+  let result = prp.Rent();
+  result._setMinMax(min, max);
+  return result;
 }

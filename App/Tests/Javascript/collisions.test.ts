@@ -3,7 +3,7 @@ import {
   FlatVec,
   VectorAdder,
   VectorResultAllocator,
-  ZERO_POOL,
+  ZERO_VR_POOL,
 } from '../../JavaScript/game/engine/physics/vector';
 
 let poly1: Array<FlatVec>;
@@ -23,7 +23,7 @@ beforeEach(() => {
   poly2[2] = new FlatVec(50, 50);
   poly2[3] = new FlatVec(0, 50);
 
-  ZERO_POOL();
+  ZERO_VR_POOL();
 });
 
 test('Test Move', () => {
@@ -60,8 +60,8 @@ function Move(poly: Array<FlatVec>, pos: FlatVec) {
     let vert = poly[i];
     dto._setXY(vert.X, vert.Y);
     let res = VectorAdder(dto, posDto);
-    vert.X = res.GetX();
-    vert.Y = res.GetY();
+    vert.X = res.X;
+    vert.Y = res.Y;
   }
 
   return poly;

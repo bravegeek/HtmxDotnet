@@ -1,7 +1,4 @@
-import { VectorResultAllocator } from '../engine/physics/vector';
-import { IVecResultDto } from './VecResultPool';
-
-export class CollisionResultPool {
+export class CollisionResultPool implements IPool<CollisionResult> {
   private pool: Array<CollisionResult>;
   private poolIndex: number = 0;
 
@@ -39,27 +36,31 @@ export class CollisionResultPool {
 }
 
 export interface ICollisionResult {
-  _setCollisionTrue(normal: IVecResultDto, depth: number): void;
+  _setCollisionTrue(x: number, y: number, depth: number): void;
   _setCollisionFalse(): void;
-  normal: IVecResultDto;
+  get normX(): number;
+  get normY(): number;
   get collision(): boolean;
   get depth(): number;
 }
 
 class CollisionResult implements ICollisionResult {
   private _collision: boolean = false;
-  readonly normal: IVecResultDto = VectorResultAllocator();
+  private _normX: number = 0;
+  private _normY: number = 0;
   private _depth: number = 0;
 
-  _setCollisionTrue(normal: IVecResultDto, depth: number): void {
+  _setCollisionTrue(x: number, y: number, depth: number): void {
     this._collision = true;
-    this.normal._setXY(normal.GetX(), normal.GetY());
+    this._normX = x;
+    this._normY = y;
     this._depth = depth;
   }
 
   _setCollisionFalse(): void {
     this._collision = false;
-    this.normal._setXY(0, 0);
+    this._normX = 0;
+    this._normY = 0;
     this._depth = 0;
   }
 
@@ -69,5 +70,13 @@ class CollisionResult implements ICollisionResult {
 
   public get depth(): number {
     return this._depth;
+  }
+
+  public get normX(): number {
+    return this._normX;
+  }
+
+  public get normY(): number {
+    return this._normY;
   }
 }

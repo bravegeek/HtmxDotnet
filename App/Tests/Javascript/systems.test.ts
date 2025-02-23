@@ -1,24 +1,35 @@
-import { ZERO_CR_POOL } from '../../JavaScript/game/engine/physics/collisions';
-import { ZERO_POOL } from '../../JavaScript/game/engine/physics/vector';
-import { Player } from '../../JavaScript/game/engine/player/playerOrchestrator';
 import {
-  defaultStage,
-  StageOrchestrator,
-} from '../../JavaScript/game/engine/stage/stageComponents';
+  ZERO_CR_POOL,
+  ZERO_PR_POOL,
+} from '../../JavaScript/game/engine/physics/collisions';
+import {
+  SET_POOL,
+  ZERO_VR_POOL,
+} from '../../JavaScript/game/engine/physics/vector';
+import { Player } from '../../JavaScript/game/engine/player/playerOrchestrator';
+import { defaultStage } from '../../JavaScript/game/engine/stage/stageComponents';
 import { StageCollisionDetection } from '../../JavaScript/game/engine/systems/systems';
+import { World } from '../../JavaScript/game/engine/world/world';
+import { VecResultPool } from '../../JavaScript/game/pools/VecResultPool';
 
 beforeEach(() => {
-  ZERO_POOL();
+  SET_POOL(new VecResultPool(200));
   ZERO_CR_POOL();
+  ZERO_PR_POOL();
+  ZERO_VR_POOL();
 });
 
 test('stage collision ground', () => {
   const stage = defaultStage();
   const p = new Player();
+  const world = new World(p, stage);
+  p.SetWorld(world);
   p.SetPlayerPostion(700, 455.0);
   const collided = StageCollisionDetection(p, stage);
 
   expect(collided).toBeTruthy();
+
+  expect(p.IsGrounded()).toBeTruthy();
 });
 
 test('stage collision right wall', () => {
