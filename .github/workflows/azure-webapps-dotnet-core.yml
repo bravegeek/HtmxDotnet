@@ -19,6 +19,10 @@
 
 name: Build and deploy ASP.Net Core app to an Azure Web App
 
+defaults:
+  run:
+    working-directory: ./App
+    
 env:
   AZURE_WEBAPP_NAME: will-htmx    # set this to the name of your Azure Web App
   AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
