@@ -1,14 +1,4 @@
 
-# clean up
-az acr delete --name $acrName --yes
-
-az ad sp delete --id $clientId
-
-az role assignment delete --assignee <clientId>
-
-#
-# constants
-
 rgName=will-htmx
 acrName=willhtmxacr
 
@@ -26,27 +16,54 @@ acrId=$(az acr show \
 
 groupId=$(az group show --query id --output tsv)
 
+# create the service principal
 spData=$(az ad sp create-for-rbac \
   --scope $groupId \
   --role Contributor \
   --sdk-auth)
-  
 
-clientId=$(echo $spData | jq -r '.clientId.value')
-clientSecret=$(echo $spData | jq -r '.clientSecret')
+clientId=$(echo $spData | jq -r '.clientId')
 
-
+# give the service principal access to push to the container registry
 az role assignment create \
   --assignee $clientId \
   --scope $acrId \
   --role AcrPush
 
-az role assignment create \
-  --assignee $clientId \
-  --scope $acrId \
-  --role AcrPush
+# Set vars we're going to need
 
+AZURE_CREDENTIALS=$spData
 
 REGISTRY_LOGIN_SERVER=$(az acr show \
   --name $acrName \
   --query loginServer --output tsv)
+
+REGISTRY_USERNAME=$clientId
+
+REGISTRY_PASSWORD=$(echo $spData | jq -r '.clientSecret')
+
+RESOURCE_GROUP=$rgName
+
+echo
+echo AZURE_CREDENTIALS
+echo $AZURE_CREDENTIALS
+echo
+echo REGISTRY_LOGIN_SERVER
+echo $REGISTRY_LOGIN_SERVER
+echo 
+echo REGISTRY_USERNAME
+echo $REGISTRY_USERNAME
+echo 
+echo REGISTRY_PASSWORD
+echo $REGISTRY_PASSWORD
+echo 
+echo RESOURCE_GROUP
+echo $RESOURCE_GROUP
+
+
+###############
+# clean up
+###############
+az acr delete --name $acrName --yes
+
+az ad sp delete --id $clientId
