@@ -52,21 +52,3 @@ REGISTRY_LOGIN_SERVER=$(az acr show \
   --query loginServer --output tsv)
 
 
-read -d '' clientId clientSecret <<< $($spData \
-  --query '[clientId, clientSecret]' \
-  -o tsv)
-
-
-read -d '' ipId subnetId <<< $(az network nic show \
-  --ids $nicId \
-  --query '[ipConfigurations[].publicIPAddress.id, ipConfigurations[].subnet.id]' \
-  -o tsv)
-
-
-
-$azVersion = az --version *>&1;
-$azVersionLines = $azVersion -split "`n"
-$pyLoc = $azVersionLines | Where-Object { $_ -match "^Python location" }
-$pythonExe = $pyLoc -replace "^Python location '(.+?)'$", '$1'
-$arch = & $pythonExe -c "import struct; print(struct.calcsize('P') * 8)";
-# assert($arch -ge 64);
