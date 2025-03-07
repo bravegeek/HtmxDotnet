@@ -2,7 +2,7 @@
 # clean up
 az acr delete --name $acrName --yes
 
-az ad sp delete --id 8168f2b8-020e-4760-8058-449b7402355e
+az ad sp delete --id $clientId
 
 az role assignment delete --assignee <clientId>
 
@@ -50,5 +50,3 @@ az role assignment create \
 REGISTRY_LOGIN_SERVER=$(az acr show \
   --name $acrName \
   --query loginServer --output tsv)
-
-
