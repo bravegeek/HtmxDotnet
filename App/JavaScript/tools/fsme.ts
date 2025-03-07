@@ -15,6 +15,11 @@ interface Connection {
   trigger: string;
 }
 
+interface Trigger {
+  name: string;
+  value: number;
+}
+
 interface Attribute {
   name: string;
   type: string;
@@ -335,3 +340,10 @@ function renderTriggers() {
 render();
 
 renderTriggers();
+
+// =========================================================
+
+class ProjectGraph {
+  states: State[] = [];
+  triggers: Trigger[] = [{ name: 'idle', value: 0 }];
+}

@@ -121,13 +121,16 @@ const watchSite = async () => {
 const watchGame = async () => {
     console.log('Watching game for changes...');
     //createDirIfNotExists('wwwroot/dist/js/game');
-    esbuild.build({
+    const gctx = esbuild.context({
         entryPoints: ['JavaScript/game/index.ts'],
         bundle: true,
         outdir: 'wwwroot/dist/js/game',
-        watch: true,
         loader: { '.ts': 'ts' },
+        sourcemap: true,
+        target: ['esnext']
     });
+
+    await gctx.watch();
 };
 
 // Main run function to execute based on command-line arguments
