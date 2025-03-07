@@ -1,0 +1,72 @@
+
+# clean up
+az acr delete --name $acrName --yes
+
+az ad sp delete --id 8168f2b8-020e-4760-8058-449b7402355e
+
+az role assignment delete --assignee <clientId>
+
+#
+# constants
+
+rgName=will-htmx
+acrName=willhtmxacr
+
+# set default region and rg
+az config set defaults.location=eastus defaults.group=$rgName
+
+# create az container registry
+az acr create \
+    --name $acrName \
+    --sku Basic
+
+acrId=$(az acr show \
+  --name $acrName \
+  --query id --output tsv)
+
+groupId=$(az group show --query id --output tsv)
+
+spData=$(az ad sp create-for-rbac \
+  --scope $groupId \
+  --role Contributor \
+  --sdk-auth)
+  
+
+clientId=$(echo $spData | jq -r '.clientId.value')
+clientSecret=$(echo $spData | jq -r '.clientSecret')
+
+
+az role assignment create \
+  --assignee $clientId \
+  --scope $acrId \
+  --role AcrPush
+
+az role assignment create \
+  --assignee $clientId \
+  --scope $acrId \
+  --role AcrPush
+
+
+REGISTRY_LOGIN_SERVER=$(az acr show \
+  --name $acrName \
+  --query loginServer --output tsv)
+
+
+read -d '' clientId clientSecret <<< $($spData \
+  --query '[clientId, clientSecret]' \
+  -o tsv)
+
+
+read -d '' ipId subnetId <<< $(az network nic show \
+  --ids $nicId \
+  --query '[ipConfigurations[].publicIPAddress.id, ipConfigurations[].subnet.id]' \
+  -o tsv)
+
+
+
+$azVersion = az --version *>&1;
+$azVersionLines = $azVersion -split "`n"
+$pyLoc = $azVersionLines | Where-Object { $_ -match "^Python location" }
+$pythonExe = $pyLoc -replace "^Python location '(.+?)'$", '$1'
+$arch = & $pythonExe -c "import struct; print(struct.calcsize('P') * 8)";
+# assert($arch -ge 64);
