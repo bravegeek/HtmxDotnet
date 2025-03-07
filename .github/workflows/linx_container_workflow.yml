@@ -4,6 +4,7 @@ name: Linux_Container_Workflow
 env:
     IMAGE_NAME: htmx-image
     CONTAINER_NAME: htmx-container
+    LOCATION: eastus
 
 jobs:
     build-and-deploy:
@@ -38,4 +39,6 @@ jobs:
             registry-username: ${{ secrets.REGISTRY_USERNAME }}
             registry-password: ${{ secrets.REGISTRY_PASSWORD }}
             name: ${{ env.CONTAINER_NAME }}
-            location: 'east us'
+            cpu: .5
+            memory: .25
+            location: ${{ env.LOCATION }}
