@@ -39,6 +39,6 @@ jobs:
             registry-username: ${{ secrets.REGISTRY_USERNAME }}
             registry-password: ${{ secrets.REGISTRY_PASSWORD }}
             name: ${{ env.CONTAINER_NAME }}
-            cpu: .5
-            memory: .25
+            cpu: .2
+            memory: .2
             location: ${{ env.LOCATION }}
