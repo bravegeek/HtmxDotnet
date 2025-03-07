@@ -397,6 +397,10 @@ export class SpeedsComponentBuilder {
     this.MaxRunSpeed = maxRunSpeed;
   }
 
+  SetGroundedVelocityDecay(groundedVelocityDecay: number) {
+    this.GroundedVelocityDecay = groundedVelocityDecay;
+  }
+
   Build() {
     return new SpeedsComponent(
       this.GroundedVelocityDecay,

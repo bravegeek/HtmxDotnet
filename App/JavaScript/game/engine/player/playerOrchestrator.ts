@@ -20,28 +20,29 @@ const defaultSpeedsBuilderOptions: speedBuilderOptions = (
   scb.SetRunSpeeds(20, 2.5);
   scb.SetFallSpeeds(10, 15);
   scb.SetAerialSpeeds(0.8, 18);
+  scb.SetGroundedVelocityDecay(0.8);
 };
 
 export class Player {
   private _world?: World;
 
-  private readonly Position: PositionComponent;
-  private readonly Velocity: VelocityComponent;
-  private readonly Flags: PlayerFlagsComponent;
-  private readonly Speeds: SpeedsComponent;
-  private readonly ECB: ECBComponent;
-  private readonly Jump: JumpComponent;
+  private readonly _Position: PositionComponent;
+  private readonly _Velocity: VelocityComponent;
+  private readonly _Flags: PlayerFlagsComponent;
+  private readonly _Speeds: SpeedsComponent;
+  private readonly _ECB: ECBComponent;
+  private readonly _Jump: JumpComponent;
 
   constructor(sbo: speedBuilderOptions = defaultSpeedsBuilderOptions) {
     const speedsBuilder = new SpeedsComponentBuilder();
     sbo(speedsBuilder);
 
-    this.Position = new PositionComponent();
-    this.Velocity = new VelocityComponent();
-    this.Speeds = speedsBuilder.Build();
-    this.Flags = new PlayerFlagsComponent();
-    this.ECB = new ECBComponent();
-    this.Jump = new JumpComponent(20, 2);
+    this._Position = new PositionComponent();
+    this._Velocity = new VelocityComponent();
+    this._Speeds = speedsBuilder.Build();
+    this._Flags = new PlayerFlagsComponent();
+    this._ECB = new ECBComponent();
+    this._Jump = new JumpComponent(20, 2);
   }
 
   public SetWorld(world: World) {
@@ -51,39 +52,45 @@ export class Player {
   // This method is for inputs from the player
   public AddXImpulse(impulse: number): void {
     if (!this.IsGrounded()) {
-      this.Velocity.AddClampedXImpulse(
+      this._Velocity.AddClampedXImpulse(
         impulse,
-        this.Speeds.AerialSpeedInpulseLimit
+        this._Speeds.AerialSpeedInpulseLimit
       );
       return;
     }
 
-    if (this.Flags.IsRunning()) {
-      this.Velocity.AddClampedXImpulse(this.Speeds.MaxRunSpeed, impulse);
+    if (this._Flags.IsRunning()) {
+      this._Velocity.AddClampedXImpulse(this._Speeds.MaxRunSpeed, impulse);
       return;
     }
 
-    if (this.Flags.IsWakling()) {
-      this.Velocity.AddClampedXImpulse(this.Speeds.MaxWalkSpeed, impulse);
+    if (this._Flags.IsWakling()) {
+      this._Velocity.AddClampedXImpulse(this._Speeds.MaxWalkSpeed, impulse);
     }
   }
 
   // This method is for inputs from the player
   public AddYImpulse(impulse: number): void {
-    if (this.Flags.IsFastFalling()) {
-      this.Velocity.AddClampedYImpulse(impulse, this.Speeds.FastFallSpeed);
+    if (this._Flags.IsFastFalling()) {
+      this._Velocity.AddClampedYImpulse(impulse, this._Speeds.FastFallSpeed);
       return;
     }
 
-    this.Velocity.AddClampedYImpulse(impulse, this.Speeds.FallSpeed);
+    this._Velocity.AddClampedYImpulse(impulse, this._Speeds.FallSpeed);
   }
 
   public SetXVelocity(vx: number): void {
-    this.Velocity.Vel.X = vx;
+    this._Velocity.Vel.X = vx;
   }
 
   public SetYVelocity(vy: number): void {
-    this.Velocity.Vel.Y = vy;
+    this._Velocity.Vel.Y = vy;
+  }
+
+  public SetPlayerPostion(x: number, y: number): void {
+    this._Position.Pos.X = x;
+    this._Position.Pos.Y = y;
+    this._ECB.MoveToPosition(x, y);
   }
 
   public IsGrounded(): boolean {
@@ -92,28 +99,34 @@ export class Player {
     for (let i = 0; i < grndLength; i++) {
       const va = grnd[i];
       const vb = grnd[i + 1];
-      if (this.ECB.DetectGroundCollision(va, vb)) {
+      if (this._ECB.DetectGroundCollision(va, vb)) {
         return true;
       }
     }
     return false;
   }
 
-  public GetVerts(): FlatVec[] {
-    return this.ECB.GetVerts();
+  public get ECBVerts(): FlatVec[] {
+    return this._ECB.GetVerts();
   }
 
-  public GetPostion(): FlatVec {
-    return this.Position.Pos;
+  public get Postion(): FlatVec {
+    return this._Position.Pos;
   }
 
-  public SetPlayerPostion(x: number, y: number): void {
-    this.Position.Pos.X = x;
-    this.Position.Pos.Y = y;
-    this.ECB.MoveToPosition(x, y);
+  public get Velocity(): FlatVec {
+    return this._Velocity.Vel;
   }
 
-  public GetECB(): ECBComponent {
-    return this.ECB;
+  public get FallSpeed(): number {
+    return this._Speeds.FallSpeed;
+  }
+
+  public get GroundedVelocityDecay(): number {
+    return this._Speeds.GroundedVelocityDecay;
+  }
+
+  public get AerialVelocityDecay(): number {
+    return this._Speeds.AerialVelocityDecay;
   }
 }

@@ -99,7 +99,7 @@ function readInput(gamePad: Gamepad) {
   currentInput.dpRight = gamePad.buttons[15].pressed;
 }
 
-export function GetInput() {
+export function GetInput(): InputAction {
   return transcribeInput(currentInput);
 }
 
