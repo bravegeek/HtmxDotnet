@@ -38,7 +38,7 @@ az role assignment create \
   --scope $acrId \
   --role AcrPush
 
-# Set vars we're going to need for the github action
+# Set vars we're going to need for the secrets for the github action
 
 AZURE_CREDENTIALS=$spData
 
