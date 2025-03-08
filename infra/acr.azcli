@@ -1,27 +1,35 @@
+# using the MS instructions to configure a github action to create a container registry.
+# https://learn.microsoft.com/en-us/azure/container-instances/container-instances-github-action
 
+
+# set region, resource group, az container registry
+region=eastus
 rgName=will-htmx
 acrName=willhtmxacr
 
 # set default region and rg
-az config set defaults.location=eastus defaults.group=$rgName
+az config set defaults.location=$region defaults.group=$rgName
+
+# get the resource group id
+groupId=$(az group show --query id --output tsv)
+
+# create the service principal and capture the output for later
+spData=$(az ad sp create-for-rbac \
+  --scope $groupId \
+  --role Contributor \
+  --sdk-auth)
 
 # create az container registry
 az acr create \
     --name $acrName \
     --sku Basic
 
+# get the container registry id
 acrId=$(az acr show \
   --name $acrName \
   --query id --output tsv)
 
-groupId=$(az group show --query id --output tsv)
-
-# create the service principal
-spData=$(az ad sp create-for-rbac \
-  --scope $groupId \
-  --role Contributor \
-  --sdk-auth)
-
+# parse the clientId from sp creation
 clientId=$(echo $spData | jq -r '.clientId')
 
 # give the service principal access to push to the container registry
@@ -30,7 +38,7 @@ az role assignment create \
   --scope $acrId \
   --role AcrPush
 
-# Set vars we're going to need
+# Set vars we're going to need for the github action
 
 AZURE_CREDENTIALS=$spData
 
@@ -64,6 +72,7 @@ echo $RESOURCE_GROUP
 ###############
 # clean up
 ###############
-az acr delete --name $acrName --yes
-
-az ad sp delete --id $clientId
+#   
+#   az acr delete --name $acrName --yes
+#
+#   az ad sp delete --id $clientId
