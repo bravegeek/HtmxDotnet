@@ -1,0 +1,80 @@
+
+# set region, resource group, az container registry
+region=eastus
+rgName=will-htmx
+acrName=willhtmxacr
+appSvcName=will-htmx
+
+# set default region and rg
+az config set defaults.location=$region defaults.group=$rgName
+
+# get the resource group id
+groupId=$(az group show --query id --output tsv)
+appSvcId=$(az webapp show --resource-group $rgName --name $appSvcName --query id --output tsv)
+
+# Enable the system-assigned managed identity for the web app
+principalId=$(az webapp identity assign \
+    --resource-group $rgName \
+    --name $appSvcName \
+    --query principalId \
+    --output tsv)
+
+# Grant the managed identity permission to access the container registry
+az role assignment create \
+    --assignee $principalId \
+    --scope $acrId \
+    --role "AcrPull"
+
+
+az webapp config set \
+    --resource-group $rgName \
+    --name $appSvcName \
+    --generic-configurations '{"acrUseManagedIdentityCreds": true}'
+
+# hack to clean up earlier mess
+property=properties.siteConfig.AcrUserManagedIdentityID=$principalId
+az resource update \
+    --ids $appSvcId \
+    --set $property
+
+# az webapp config container set \
+#     --name <app-name> \
+#     --resource-group <group-name> \
+#     --docker-custom-image-name <docker-hub-repo>
+
+
+# property=properties.siteConfig.AcrUserManagedIdentityID=$clientId
+
+# az resource update \
+#     --ids $appSvcId \
+#     --set $property
+
+# az role assignment create \
+#   --assignee $clientId \
+#   --scope $acrId \
+#   --role AcrPull
+
+
+az webapp config show \
+    --resource-group $rgName \
+    --name $appSvcName
+
+
+# principalId=$(az webapp identity assign \
+#     --resource-group $rgName 
+#     --name $appSvcName 
+#     --query principalId 
+#     --output tsv)
+# echo $principalId
+
+
+
+# clientId=80eed0c8-5778-4ca6-a3b7-629fe3636a41
+
+
+# data="{\""acrUserManagedIdentityID\"": \""$clientId\""}" # likely bad json formatting
+# az webapp config set \
+#     --resource-group $rgName \
+#     --name $appSvcName \
+#     --generic-configurations $data 
+#     # --output json | ConvertFrom-Json

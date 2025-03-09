@@ -7,9 +7,9 @@ on:
 
 env:
     IMAGE_NAME: htmx-image
-    CONTAINER_NAME: htmx-container
+    # CONTAINER_NAME: htmx-container
     LOCATION: eastus
-    AZURE_WEBAPP_NAME: will-htmx
+    AZURE_WEBAPP_NAME: htmxappsvc
 
 jobs:
     build:

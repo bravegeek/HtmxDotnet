@@ -3,9 +3,16 @@
 
 
 # set region, resource group, az container registry
+# region=eastus
+# rgName=will-htmx
+# acrName=willhtmxacr
+
 region=eastus
-rgName=will-htmx
-acrName=willhtmxacr
+rgName=testme
+acrName=htmxacr
+appSvcName=htmxappsvc
+appSvcPlanName=htmxappsvcplan
+dockerImageName=htmx-image
 
 # set default region and rg
 az config set defaults.location=$region defaults.group=$rgName
@@ -37,6 +44,37 @@ az role assignment create \
   --assignee $clientId \
   --scope $acrId \
   --role AcrPush
+
+# create the app service plan
+az appservice plan create \
+    --resource-group $rgName \
+    --name $appSvcPlanName \
+    --is-linux \
+    --sku F1
+
+# create the web app
+# https://azure.github.io/AppService/2024/09/17/How-to-pull-from-ACR-with-Managed-Identity-using-Windows-containers.html
+az webapp create \
+   --resource-group $rgName \
+   --name $appSvcName \
+   --plan $appSvcPlanName \
+   --container-image-name $acrName.azurecr.io/$dockerImageName:latest \
+   --assign-identity [system] \
+   --acr-identity [system] \
+   --acr-use-identity
+
+principalId=$(az webapp identity show \
+    --resource-group $rgName \
+    --name $appSvcName \
+    --query principalId \
+    --output tsv)
+
+# Grant the managed identity permission to access the container registry
+az role assignment create \
+    --assignee $principalId \
+    --scope $acrId \
+    --role "AcrPull"
+
 
 # Set vars we're going to need for the secrets for the github action
 
