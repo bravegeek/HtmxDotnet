@@ -94,3 +94,8 @@ az webapp config show \
 #     --name $appSvcName \
 #     --generic-configurations $data 
 #     # --output json | ConvertFrom-Json
+
+
+# https://learn.microsoft.com/en-us/azure/container-instances/container-instances-github-action
+
+az container app up --acr htmxacr --repository https://github.com/bravegeek/HtmxDotnet
