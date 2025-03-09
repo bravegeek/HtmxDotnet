@@ -13,6 +13,8 @@ acrName=htmxacr
 appSvcName=htmxappsvc
 appSvcPlanName=htmxappsvcplan
 dockerImageName=htmx-image
+# same as dockerfile
+dockerPort=8080
 
 # set default region and rg
 az config set defaults.location=$region defaults.group=$rgName
@@ -75,6 +77,13 @@ az role assignment create \
     --assignee $principalId \
     --scope $acrId \
     --role "AcrPull"
+
+# Set the port to the same as the dockerfile
+az webapp config appsettings set \
+  --resource-group $rgName \
+  --name $appSvcName \
+  --settings "WEBSITES_PORT=$dockerPort" 
+
 
 
 # Set vars we're going to need for the secrets for the github action
