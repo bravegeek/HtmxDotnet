@@ -3,15 +3,15 @@
 
 
 # set region, resource group, az container registry
-# region=eastus
-# rgName=will-htmx
-# acrName=willhtmxacr
-
 region=eastus
-rgName=testme
+rgName=will-htmx
+
 acrName=htmxacr
+
 appSvcName=htmxappsvc
 appSvcPlanName=htmxappsvcplan
+
+# same as workflow
 dockerImageName=htmx-image
 # same as dockerfile
 dockerPort=8080
@@ -65,6 +65,12 @@ az webapp create \
    --acr-identity [system] \
    --acr-use-identity
 
+# Set the port to the same as the dockerfile
+az webapp config appsettings set \
+  --resource-group $rgName \
+  --name $appSvcName \
+  --settings "WEBSITES_PORT=$dockerPort" 
+
 # Get the principalId of the System Managed Identity
 principalId=$(az webapp identity show \
     --resource-group $rgName \
@@ -77,12 +83,6 @@ az role assignment create \
     --assignee $principalId \
     --scope $acrId \
     --role "AcrPull"
-
-# Set the port to the same as the dockerfile
-az webapp config appsettings set \
-  --resource-group $rgName \
-  --name $appSvcName \
-  --settings "WEBSITES_PORT=$dockerPort" 
 
 
 

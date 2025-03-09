@@ -1,3 +1,10 @@
+#
+# ###
+# DON'T RUN THIS FILE it's not complete
+#
+# some commands I was trying. most are used in the main file.
+#
+
 
 # set region, resource group, az container registry
 region=eastus
@@ -26,6 +33,12 @@ az role assignment create \
     --role "AcrPull"
 
 
+az webapp config show \
+    --resource-group $rgName \
+    --name $appSvcName
+
+
+
 az webapp config set \
     --resource-group $rgName \
     --name $appSvcName \
@@ -36,6 +49,12 @@ property=properties.siteConfig.AcrUserManagedIdentityID=$principalId
 az resource update \
     --ids $appSvcId \
     --set $property
+
+az webapp config show \
+    --resource-group $rgName \
+    --name $appSvcName
+
+
 
 # az webapp config container set \
 #     --name <app-name> \
@@ -55,9 +74,6 @@ az resource update \
 #   --role AcrPull
 
 
-az webapp config show \
-    --resource-group $rgName \
-    --name $appSvcName
 
 
 # principalId=$(az webapp identity assign \
