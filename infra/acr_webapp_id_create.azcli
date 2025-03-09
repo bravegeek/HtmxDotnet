@@ -1,0 +1,169 @@
+# using the MS instructions to configure a github action to create a container registry.
+# https://learn.microsoft.com/en-us/azure/container-instances/container-instances-github-action
+
+# https://learn.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=openid%2Caspnetcore
+
+
+# set region, resource group, az container registry
+region=eastus
+rgName=will-htmx
+
+acrName=htmxacr
+
+appSvcName=htmxappsvc
+appSvcPlanName=htmxappsvcplan
+
+
+
+# same as workflow
+dockerImageName=htmx-image
+# same as dockerfile
+dockerPort=8080
+
+# set default region and rg
+az config set defaults.location=$region defaults.group=$rgName
+
+# get the resource group id
+groupId=$(az group show --query id --output tsv)
+
+
+
+# appId=7f9ac2a9-e802-41da-acc6-a4d8753326ea
+
+appId=$(az ad app create \
+  --display-name $acrName \
+  --query appId --output tsv)
+
+spData=$(az ad sp create --id $appId)
+
+assigneeObjectId=$(echo $spData | jq -r '.id')
+
+subscriptionId=05c36736-70d3-413e-bc92-23495b043a07
+
+az role assignment create \
+  --role contributor \
+  --subscription $subscriptionId \
+  --assignee-object-id  $assigneeObjectId \
+  --scope /subscriptions/$subscriptionId/resourceGroups/$rgName/providers/Microsoft.Web/sites/$appSvcName \
+  --assignee-principal-type ServicePrincipal
+
+
+az ad app federated-credential create \
+  --id $appId \
+  --parameters credential.json
+  
+("credential.json" contains the following content)
+{
+    "name": "credName",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:bravegeek/HtmxDotnet:ref:refs/heads/main",
+    "description": "Testing",
+    "audiences": [
+        "api://AzureADTokenExchange"
+    ]
+}
+
+
+
+# create the service principal and capture the output for later
+spData=$(az ad sp create-for-rbac \
+  --scope $groupId \
+  --role Contributor \
+  --sdk-auth)
+
+# create az container registry
+az acr create \
+    --name $acrName \
+    --sku Basic
+
+# get the container registry id
+acrId=$(az acr show \
+  --name $acrName \
+  --query id --output tsv)
+
+# parse the clientId from sp creation
+clientId=$(echo $spData | jq -r '.clientId')
+
+# give the service principal access to push to the container registry
+az role assignment create \
+  --assignee $clientId \
+  --scope $acrId \
+  --role AcrPush
+
+# create the app service plan
+az appservice plan create \
+    --resource-group $rgName \
+    --name $appSvcPlanName \
+    --is-linux \
+    --sku F1
+
+# create a web app that runs under a System Managed Identity
+# https://azure.github.io/AppService/2024/09/17/How-to-pull-from-ACR-with-Managed-Identity-using-Windows-containers.html
+az webapp create \
+   --resource-group $rgName \
+   --name $appSvcName \
+   --plan $appSvcPlanName \
+   --container-image-name $acrName.azurecr.io/$dockerImageName:latest \
+   --assign-identity [system] \
+   --acr-identity [system] \
+   --acr-use-identity
+
+# Set the port to the same as the dockerfile
+az webapp config appsettings set \
+  --resource-group $rgName \
+  --name $appSvcName \
+  --settings "WEBSITES_PORT=$dockerPort" 
+
+# Get the principalId of the System Managed Identity
+principalId=$(az webapp identity show \
+    --resource-group $rgName \
+    --name $appSvcName \
+    --query principalId \
+    --output tsv)
+
+# Grant the System Managed Identity permission to access the container registry
+az role assignment create \
+    --assignee $principalId \
+    --scope $acrId \
+    --role "AcrPull"
+
+
+
+# Set vars we're going to need for the secrets for the github action
+
+AZURE_CREDENTIALS=$spData
+
+REGISTRY_LOGIN_SERVER=$(az acr show \
+  --name $acrName \
+  --query loginServer --output tsv)
+
+REGISTRY_USERNAME=$clientId
+
+REGISTRY_PASSWORD=$(echo $spData | jq -r '.clientSecret')
+
+RESOURCE_GROUP=$rgName
+
+echo
+echo AZURE_CREDENTIALS
+echo $AZURE_CREDENTIALS
+echo
+echo REGISTRY_LOGIN_SERVER
+echo $REGISTRY_LOGIN_SERVER
+echo 
+echo REGISTRY_USERNAME
+echo $REGISTRY_USERNAME
+echo 
+echo REGISTRY_PASSWORD
+echo $REGISTRY_PASSWORD
+echo 
+echo RESOURCE_GROUP
+echo $RESOURCE_GROUP
+
+
+###############
+# clean up
+###############
+#   
+#   az acr delete --name $acrName --yes
+#
+#   az ad sp delete --id $clientId
