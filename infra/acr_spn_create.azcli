@@ -52,7 +52,7 @@ az appservice plan create \
     --is-linux \
     --sku F1
 
-# create the web app
+# create a web app that runs under a System Managed Identity
 # https://azure.github.io/AppService/2024/09/17/How-to-pull-from-ACR-with-Managed-Identity-using-Windows-containers.html
 az webapp create \
    --resource-group $rgName \
@@ -63,13 +63,14 @@ az webapp create \
    --acr-identity [system] \
    --acr-use-identity
 
+# Get the principalId of the System Managed Identity
 principalId=$(az webapp identity show \
     --resource-group $rgName \
     --name $appSvcName \
     --query principalId \
     --output tsv)
 
-# Grant the managed identity permission to access the container registry
+# Grant the System Managed Identity permission to access the container registry
 az role assignment create \
     --assignee $principalId \
     --scope $acrId \
