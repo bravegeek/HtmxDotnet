@@ -41,7 +41,6 @@ namespace HtmxDotnet.utils
         }
     }
 
-
     internal class HtmlStringBuilderPolicy : PooledObjectPolicy<StringBuilder>
     {
         private readonly int _initialCap;
@@ -145,7 +144,6 @@ namespace HtmxDotnet.utils
                 _attributes = [];
 
                 return _attributes;
-
             }
         }
 
