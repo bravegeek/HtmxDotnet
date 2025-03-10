@@ -1,4 +1,4 @@
-export class VecResultPool {
+export class VecResultPool implements IPool<IVecResult> {
   private pool: Array<VecResultDto>;
   private poolIndex: number = 0;
 
@@ -16,22 +16,17 @@ export class VecResultPool {
     let pLength = p.length;
 
     if (pi < pLength) {
+      let vrd = p[pi];
+      vrd._zero();
       this.poolIndex++;
-      return p[pi];
+      return vrd;
     }
 
     return new VecResultDto();
   }
 
   Zero(): void {
-    let p = this.pool;
-    let pi = this.poolIndex;
-
     this.poolIndex = 0;
-
-    for (let i = 0; i < pi; i++) {
-      p[i]._zero();
-    }
   }
 }
 

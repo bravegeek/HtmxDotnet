@@ -21,11 +21,11 @@ const crp = new CollisionResultPool(1000);
 const prp = new ProjectionResultPool(1000);
 
 export function ZERO_CR_POOL() {
-  crp.zero();
+  crp.Zero();
 }
 
 export function ZERO_PR_POOL() {
-  prp.zero();
+  prp.Zero();
 }
 
 export function IntersectsPolygons(

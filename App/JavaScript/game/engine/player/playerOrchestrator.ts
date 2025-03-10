@@ -50,24 +50,24 @@ export class Player {
   }
 
   // This method is for inputs from the player
-  private AddXImpulse(impulse: number): void {
-    if (!this.IsGrounded()) {
-      this._Velocity.AddClampedXImpulse(
-        impulse,
-        this._Speeds.AerialSpeedInpulseLimit
-      );
-      return;
-    }
+  // private AddXImpulse(impulse: number): void {
+  //   if (!this.IsGrounded()) {
+  //     this._Velocity.AddClampedXImpulse(
+  //       impulse,
+  //       this._Speeds.AerialSpeedInpulseLimit
+  //     );
+  //     return;
+  //   }
 
-    if (this._Flags.IsRunning()) {
-      this._Velocity.AddClampedXImpulse(this._Speeds.MaxRunSpeed, impulse);
-      return;
-    }
+  //   if (this._Flags.IsRunning()) {
+  //     this._Velocity.AddClampedXImpulse(this._Speeds.MaxRunSpeed, impulse);
+  //     return;
+  //   }
 
-    if (this._Flags.IsWakling()) {
-      this._Velocity.AddClampedXImpulse(this._Speeds.MaxWalkSpeed, impulse);
-    }
-  }
+  //   if (this._Flags.IsWakling()) {
+  //     this._Velocity.AddClampedXImpulse(this._Speeds.MaxWalkSpeed, impulse);
+  //   }
+  // }
 
   public AddWalkInpulse(impulse: number): void {
     this._Velocity.AddClampedXImpulse(

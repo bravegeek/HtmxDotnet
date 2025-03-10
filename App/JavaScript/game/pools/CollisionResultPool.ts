@@ -16,22 +16,17 @@ export class CollisionResultPool implements IPool<CollisionResult> {
     let pLength = p.length;
 
     if (pi < pLength) {
+      const result = p[pi];
+      result._setCollisionFalse();
       this.poolIndex++;
-      return p[pi];
+      return result;
     }
 
     return new CollisionResult();
   }
 
-  zero(): void {
-    let p = this.pool;
-    let pi = this.poolIndex;
-
+  Zero(): void {
     this.poolIndex = 0;
-
-    for (let i = 0; i < pi; i++) {
-      p[i]._setCollisionFalse();
-    }
   }
 }
 

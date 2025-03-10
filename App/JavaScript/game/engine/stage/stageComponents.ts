@@ -3,17 +3,19 @@ import { FlatVec } from '../physics/vector';
 export function defaultStage() {
   const sv = new StageVerticies();
   const sl = new Ledges(sv.GetGround()[0], sv.GetGround()[1]);
-
-  return new Stage(sv, sl);
+  const db = new DeathBoundry(-100, 1180, -100, 2020);
+  return new Stage(sv, sl, db);
 }
 
 export class Stage {
-  public StageVerticies: StageVerticies;
-  public Ledges: Ledges;
+  public readonly StageVerticies: StageVerticies;
+  public readonly Ledges: Ledges;
+  public readonly DeathBoundry: DeathBoundry;
 
-  constructor(sv: StageVerticies, sl: Ledges) {
+  constructor(sv: StageVerticies, sl: Ledges, db: DeathBoundry) {
     this.StageVerticies = sv;
     this.Ledges = sl;
+    this.DeathBoundry = db;
   }
 }
 
@@ -92,6 +94,20 @@ export class Ledges {
 
   public GetRightLedge() {
     return this.rightLedge;
+  }
+}
+
+export class DeathBoundry {
+  public readonly topBoundry: number;
+  public readonly bottomBoundry: number;
+  public readonly leftBoundry: number;
+  public readonly rightBoundry: number;
+
+  constructor(t: number, b: number, l: number, r: number) {
+    this.topBoundry = t;
+    this.bottomBoundry = b;
+    this.leftBoundry = l;
+    this.rightBoundry = r;
   }
 }
 

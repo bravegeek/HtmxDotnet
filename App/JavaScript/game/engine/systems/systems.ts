@@ -145,5 +145,28 @@ function ApplyVelocty(p: Player) {
 }
 
 function OutOfBoundsCheck(w: World) {
-  //
+  const pPos = w.player!.Postion;
+  const deathBoundry = w.stage!.DeathBoundry;
+
+  if (pPos.Y < deathBoundry.topBoundry) {
+    // kill player if in hit stun.
+  }
+
+  if (pPos.Y > deathBoundry.bottomBoundry) {
+    // kill player?
+  }
+
+  if (pPos.X < deathBoundry.leftBoundry) {
+    // kill Player?
+  }
+
+  if (pPos.X > deathBoundry.rightBoundry) {
+    // kill player?
+  }
+}
+
+function KillPlayer(w: World) {
+  //reset player stats
+  //reduce stock count by one
+  //respawn player in correct spawn point
 }
