@@ -50,7 +50,7 @@ export class Player {
   }
 
   // This method is for inputs from the player
-  public AddXImpulse(impulse: number): void {
+  private AddXImpulse(impulse: number): void {
     if (!this.IsGrounded()) {
       this._Velocity.AddClampedXImpulse(
         impulse,
@@ -66,6 +66,20 @@ export class Player {
 
     if (this._Flags.IsWakling()) {
       this._Velocity.AddClampedXImpulse(this._Speeds.MaxWalkSpeed, impulse);
+    }
+  }
+
+  public AddWalkInpulse(impulse: number): void {
+    this._Velocity.AddClampedXImpulse(
+      this._Speeds.MaxWalkSpeed,
+      impulse * this._Speeds.WalkSpeedMulitplier
+    );
+  }
+
+  public AddJumpImpulse(): void {
+    if (this._Jump.HasJumps()) {
+      this._Velocity.Vel.Y = -this._Jump.JumpVelocity;
+      this._Jump.IncrementJumps();
     }
   }
 
@@ -91,6 +105,14 @@ export class Player {
     this._Position.Pos.X = x;
     this._Position.Pos.Y = y;
     this._ECB.MoveToPosition(x, y);
+  }
+
+  public AddToPlayerXPosition(x: number): void {
+    this._Position.Pos.X += x;
+  }
+
+  public AddToPlayerYPosition(y: number): void {
+    this._Position.Pos.Y += y;
   }
 
   public IsGrounded(): boolean {
@@ -128,5 +150,21 @@ export class Player {
 
   public get AerialVelocityDecay(): number {
     return this._Speeds.AerialVelocityDecay;
+  }
+
+  public FaceRight() {
+    this._Flags.FaceRight();
+  }
+
+  public FaceLeft() {
+    this._Flags.FaceLeft();
+  }
+
+  public ChangeDirections() {
+    if (this._Flags.IsFacingRight()) {
+      this.FaceLeft();
+      return;
+    }
+    this.FaceRight();
   }
 }
