@@ -35,7 +35,7 @@ jobs:
         #     registry: ${{ secrets.REGISTRY_LOGIN_SERVER 
 
         - name: Build image
-          run: docker build . --file dockerfile --tag ${{ env.IMAGE_NAME }}:${{github.sha}}
+          run: docker build . --file dockerfile
 
         - name: Push image
           run: docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
