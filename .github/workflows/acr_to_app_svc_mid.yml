@@ -37,6 +37,9 @@ jobs:
         - name: Build image
           run: docker build . --file dockerfile --tag ${{ env.IMAGE_NAME }}:${{github.sha}}
 
+        - name: Push image
+          run: docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
     deploy:
       runs-on: ubuntu-latest
       
