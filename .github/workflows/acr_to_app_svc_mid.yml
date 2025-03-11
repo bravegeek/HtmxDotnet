@@ -1,5 +1,7 @@
 name: Build to ACR, deploy to App Service using OIDC
 
+# shamelessly copied from https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure-openid-connect
+
 on:
   push:
     branches:
