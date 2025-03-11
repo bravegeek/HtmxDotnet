@@ -9,10 +9,8 @@ region=eastus
 rgName=will-htmx
 
 acrName=htmxacr
-
 appSvcName=htmxappsvc
 appSvcPlanName=htmxappsvcplan
-
 managedIdentityName=ghactionid
 
 # same as workflow
@@ -73,9 +71,6 @@ acrId=$(az acr create \
     --query id  \
     --output tsv)
 
-# get the container registry id
-# acrId=$(az acr show --name $acrName --query id --output tsv)
-
 # Grant the Web App's System Managed Identity
 # permission to access the container registry
 az role assignment create \
@@ -133,53 +128,37 @@ az ad app federated-credential create \
     }'
 
 
+########################################
+# Values that you can find in the portal
+########################################
 
+AZURE_CLIENT_ID=$appId
 
-# Set vars we're going to need for the secrets for the github action
+AZURE_SUBSCRIPTION_ID=$(az account show --query id --output tsv)
 
-# get the resource group id
-groupId=$(az group show --query id --output tsv)
+AZURE_TENANT_ID=$(az account show --query tenantId --output tsv)
 
-subscriptionId=$(az account show --query id --output tsv)
-
-tenantId=$(az account show --query tenantId --output tsv)
-
-
-# AZURE_CREDENTIALS=$spData
-
-# REGISTRY_LOGIN_SERVER=$(az acr show \
-#   --name $acrName \
-#   --query loginServer --output tsv)
-
-# REGISTRY_USERNAME=$clientId
-
-# REGISTRY_PASSWORD=$(echo $spData | jq -r '.clientSecret')
-
-# RESOURCE_GROUP=$rgName
-
-# echo
-# echo AZURE_CREDENTIALS
-# echo $AZURE_CREDENTIALS
-# echo
-# echo REGISTRY_LOGIN_SERVER
-# echo $REGISTRY_LOGIN_SERVER
-# echo 
-# echo REGISTRY_USERNAME
-# echo $REGISTRY_USERNAME
-# echo 
-# echo REGISTRY_PASSWORD
-# echo $REGISTRY_PASSWORD
-# echo 
-# echo RESOURCE_GROUP
-# echo $RESOURCE_GROUP
+echo
+echo Put these into your GH secrets
+echo
+echo AZURE_CLIENT_ID  --use the portal to get this from the App in AAD
+echo $AZURE_CLIENT_ID
+echo 
+echo AZURE_SUBSCRIPTION_ID  --find in portal
+echo $AZURE_SUBSCRIPTION_ID
+echo
+echo AZURE_TENANT_ID  --find in portal
+echo $AZURE_TENANT_ID
 
 
 ###############
-# clean up
+# clean up  
+
+# Run these in the same cmd shell and it will reuse the vars
 ###############
-   
-az acr delete --name $acrName --yes
-az ad app delete --id $appId
+
 az webapp delete --name $appSvcName
 az appservice plan delete --name $appSvcPlanName --yes
-
+az acr delete --name $acrName --yes
+# deletes the user managed identity
+az ad app delete --id $appId

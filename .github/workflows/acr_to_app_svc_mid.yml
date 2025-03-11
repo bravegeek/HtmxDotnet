@@ -1,4 +1,4 @@
-name: Build to ACR deploy to App Service using OIDC
+name: Build to ACR, deploy to App Service using OIDC
 
 on:
   push:
@@ -23,14 +23,16 @@ jobs:
         # checkout the repo
         - uses: actions/checkout@main
           
-        # login with a federated credential 
-        - name: 'Login via Azure CLI'
+        # login to Az with a federated credential OIDC
+        - name: Login via Azure CLI
           uses: azure/login@v2
           with:
+            # clientId can be found in Az Entra ID -> Enterprise Apps -> All apps -> 'ghactionid.appId'
             client-id: ${{ secrets.AZURE_CLIENT_ID }}
             tenant-id: ${{ secrets.AZURE_TENANT_ID }}
             subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+        # login to the ACR with OIDC token so we can push docker images
         - name: Login to ACR via OIDC
           run: az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }}
 
@@ -47,6 +49,5 @@ jobs:
             app-name: ${{ env.AZURE_WEBAPP_NAME }}
             images: ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-        - name: logout
-          run: |
-              az logout
+        - name: Logout
+          run: az logout
