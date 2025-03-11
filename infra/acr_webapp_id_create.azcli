@@ -13,6 +13,8 @@ acrName=htmxacr
 appSvcName=htmxappsvc
 appSvcPlanName=htmxappsvcplan
 
+managedIdentityName=ghactionid
+
 # same as workflow
 dockerImageName=htmx-image
 # same as dockerfile
@@ -21,13 +23,6 @@ dockerPort=8080
 
 # set default region and rg
 az config set defaults.location=$region defaults.group=$rgName
-
-# get the resource group id
-groupId=$(az group show --query id --output tsv)
-
-subscriptionId=$(az account show --query id --output tsv)
-
-tenantId=$(az account show --query tenantId --output tsv)
 
 ########################################
 # create the Web App (with managed identity)
@@ -72,32 +67,14 @@ appSvcId=$(az webapp show --resource-group $rgName --name $appSvcName --query id
 ########################################
 
 # create az container registry
-az acr create \
+acrId=$(az acr create \
     --name $acrName \
-    --sku Basic
+    --sku Basic \
+    --query id  \
+    --output tsv)
 
 # get the container registry id
-acrId=$(az acr show --name $acrName --query id --output tsv)
-
-
-########################################
-# create the App (managed identity)
-########################################
-
-# create the App
-appId=$(az ad app create \
-  --display-name $acrName \
-  --query appId --output tsv)
-
-# create the SP for the App
-spData=$(az ad sp create --id $appId)
-
-appObjectId=$(echo $spData | jq -r '.id')
-
-
-########################################
-# assign roles
-########################################
+# acrId=$(az acr show --name $acrName --query id --output tsv)
 
 # Grant the Web App's System Managed Identity
 # permission to access the container registry
@@ -106,7 +83,24 @@ az role assignment create \
     --scope $acrId \
     --role AcrPull
 
-# Grant the App's Service Principal permission to access the the Web App
+
+########################################
+# The following is for GH Actions.
+#
+# Allow gha to push to the ACR and update the web app
+# Doesn't require any spn secrets
+########################################
+
+# create the App (AD user managed identity)
+appId=$(az ad app create \
+  --display-name $managedIdentityName \
+  --query appId --output tsv)
+
+# create the Service Principal for the App
+appObjectId=$(az ad sp create --id $appId --query id --output tsv)
+
+# Grant the App's (user managed identity)
+# Service Principal permission to update the the Web App
 az role assignment create \
   --assignee-object-id  $appObjectId \
   --assignee-principal-type ServicePrincipal \
@@ -120,10 +114,12 @@ az role assignment create \
   --scope $acrId \
   --role AcrPush
 
+
 ########################################
-# create federated identity credential
+# Create a credential for gha to use
 ########################################
 
+# create federated identity credential
 az ad app federated-credential create \
   --id $appId \
   --parameters '{\
@@ -139,58 +135,51 @@ az ad app federated-credential create \
 
 
 
-# # create the service principal and capture the output for later
-# spData=$(az ad sp create-for-rbac \
-#   --scope $groupId \
-#   --role Contributor \
-#   --sdk-auth)
-
-# # parse the clientId from sp creation
-# clientId=$(echo $spData | jq -r '.clientId')
-
-# # give the service principal access to push to the container registry
-# az role assignment create \
-#   --assignee $clientId \
-#   --scope $acrId \
-#   --role AcrPush
-
-
-
 # Set vars we're going to need for the secrets for the github action
 
-AZURE_CREDENTIALS=$spData
+# get the resource group id
+groupId=$(az group show --query id --output tsv)
 
-REGISTRY_LOGIN_SERVER=$(az acr show \
-  --name $acrName \
-  --query loginServer --output tsv)
+subscriptionId=$(az account show --query id --output tsv)
 
-REGISTRY_USERNAME=$clientId
+tenantId=$(az account show --query tenantId --output tsv)
 
-REGISTRY_PASSWORD=$(echo $spData | jq -r '.clientSecret')
 
-RESOURCE_GROUP=$rgName
+# AZURE_CREDENTIALS=$spData
 
-echo
-echo AZURE_CREDENTIALS
-echo $AZURE_CREDENTIALS
-echo
-echo REGISTRY_LOGIN_SERVER
-echo $REGISTRY_LOGIN_SERVER
-echo 
-echo REGISTRY_USERNAME
-echo $REGISTRY_USERNAME
-echo 
-echo REGISTRY_PASSWORD
-echo $REGISTRY_PASSWORD
-echo 
-echo RESOURCE_GROUP
-echo $RESOURCE_GROUP
+# REGISTRY_LOGIN_SERVER=$(az acr show \
+#   --name $acrName \
+#   --query loginServer --output tsv)
+
+# REGISTRY_USERNAME=$clientId
+
+# REGISTRY_PASSWORD=$(echo $spData | jq -r '.clientSecret')
+
+# RESOURCE_GROUP=$rgName
+
+# echo
+# echo AZURE_CREDENTIALS
+# echo $AZURE_CREDENTIALS
+# echo
+# echo REGISTRY_LOGIN_SERVER
+# echo $REGISTRY_LOGIN_SERVER
+# echo 
+# echo REGISTRY_USERNAME
+# echo $REGISTRY_USERNAME
+# echo 
+# echo REGISTRY_PASSWORD
+# echo $REGISTRY_PASSWORD
+# echo 
+# echo RESOURCE_GROUP
+# echo $RESOURCE_GROUP
 
 
 ###############
 # clean up
 ###############
-#   
-#   az acr delete --name $acrName --yes
-#
-#   az ad sp delete --id $clientId
+   
+az acr delete --name $acrName --yes
+az ad app delete --id $appId
+az webapp delete --name $appSvcName
+az appservice plan delete --name $appSvcPlanName --yes
+
