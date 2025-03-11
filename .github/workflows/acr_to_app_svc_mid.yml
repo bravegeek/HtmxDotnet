@@ -12,7 +12,7 @@ permissions:
 env:
     LOCATION: eastus
     AZURE_WEBAPP_NAME: htmxappsvc
-    AZURE_CONTAINER_REGISTRY: htmxacr
+    AZURE_CONTAINER_REGISTRY: htmxacr.azurecr.io
     IMAGE_NAME: htmx-image
 
 jobs:
