@@ -50,7 +50,7 @@ jobs:
       steps:
 
       - name: Login to ACR via OIDC
-        run: az login
+        run: az login --identity --client-id ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
