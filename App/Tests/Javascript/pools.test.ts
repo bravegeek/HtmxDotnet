@@ -14,6 +14,8 @@ test('VecResultPool Test', () => {
 
   SUT.Zero();
 
-  expect(result.X).toBe(0);
-  expect(result.Y).toBe(0);
+  let result2 = SUT.Rent();
+
+  expect(result2.X).toBe(0);
+  expect(result2.Y).toBe(0);
 });

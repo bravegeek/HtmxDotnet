@@ -27,6 +27,8 @@ test('vec library pool test', () => {
 
   ZERO_VR_POOL();
 
-  expect(result.X).toBe(0);
-  expect(result.Y).toBe(0);
+  const result2 = VectorResultAllocator();
+
+  expect(result2.X).toBe(0);
+  expect(result2.Y).toBe(0);
 });

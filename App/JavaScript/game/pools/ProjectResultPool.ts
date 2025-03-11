@@ -17,21 +17,16 @@ export class ProjectionResultPool implements IPool<ProjectionResult> {
     let pLength = p.length;
 
     if (pi < pLength) {
+      const result = p[pi];
+      result._zero();
       this.poolIndex++;
-      return p[pi];
+      return result;
     }
 
     return new ProjectionResult();
   }
-  zero(): void {
-    let p = this.pool;
-    let pi = this.poolIndex;
-
+  Zero(): void {
     this.poolIndex = 0;
-
-    for (let i = 0; i < pi; i++) {
-      p[i]._zero();
-    }
   }
 }
 

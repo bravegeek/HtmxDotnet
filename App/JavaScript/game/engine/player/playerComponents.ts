@@ -61,6 +61,7 @@ export class SpeedsComponent {
   public readonly RunSpeedMultiplier: number;
   public readonly FastFallSpeed: number;
   public readonly FallSpeed: number;
+  // Might need a general Aerial speed limit for each character
 
   constructor(
     grndSpeedVelDecay: number,

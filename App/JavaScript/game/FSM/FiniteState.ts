@@ -66,43 +66,43 @@ type stateConfig = {
   onExit?: () => void;
 };
 
-export class FSMState {
-  readonly stateId: stateId;
-  readonly stateName: string;
-  readonly stateFrameLength?: number = undefined;
-  readonly interuptFrame?: number = undefined;
-  onEnter?: () => void;
-  onUpdate?: () => void;
-  onExit?: () => void;
+// export class FSMState {
+//   readonly stateId: stateId;
+//   readonly stateName: string;
+//   readonly stateFrameLength?: number = undefined;
+//   readonly interuptFrame?: number = undefined;
+//   onEnter?: () => void;
+//   onUpdate?: () => void;
+//   onExit?: () => void;
 
-  constructor(
-    stateId: stateId,
-    stateName: string,
-    config: stateConfig,
-    stateFrameLength: number | undefined = undefined,
-    interuptFrame: number | undefined = undefined
-  ) {
-    this.stateFrameLength = stateFrameLength;
-    this.interuptFrame = interuptFrame;
-    this.stateName = stateName;
-    this.stateId = stateId;
-    this.onEnter = config.onEnter;
-    this.onExit = config.onExit;
-    this.onUpdate = config.onUpdate;
-  }
+//   constructor(
+//     stateId: stateId,
+//     stateName: string,
+//     config: stateConfig,
+//     stateFrameLength: number | undefined = undefined,
+//     interuptFrame: number | undefined = undefined
+//   ) {
+//     this.stateFrameLength = stateFrameLength;
+//     this.interuptFrame = interuptFrame;
+//     this.stateName = stateName;
+//     this.stateId = stateId;
+//     this.onEnter = config.onEnter;
+//     this.onExit = config.onExit;
+//     this.onUpdate = config.onUpdate;
+//   }
 
-  canInterupt(currentFrame: number): boolean {
-    if (this.interuptFrame == undefined) {
-      return true;
-    }
+//   canInterupt(currentFrame: number): boolean {
+//     if (this.interuptFrame == undefined) {
+//       return true;
+//     }
 
-    if (currentFrame >= this.interuptFrame) {
-      return true;
-    }
+//     if (currentFrame >= this.interuptFrame) {
+//       return true;
+//     }
 
-    return false;
-  }
-}
+//     return false;
+//   }
+// }
 
 // STATE RELATIONS ===================================================
 
@@ -117,6 +117,7 @@ export const RUN_RELATIONS = InitRunRelations();
 export const RUN_TURN_RELATIONS = InitRunTurnRelations();
 export const RUN_STOP_RELATIONS = InitStopRunRelations();
 export const JUMP_SQUAT_RELATIONS = InitJumpSquatRelations();
+export const JUMP_RELATIONS = InitJumpRelations();
 
 // ====================================================================
 
@@ -318,7 +319,7 @@ function InitRunTurnTranslations(): ActionStateMappings {
 function InitStopRunTranslations(): ActionStateMappings {
   const stopRunTranslations = new ActionStateMappings();
   stopRunTranslations._setMappings([
-    { geId: GameEvents.moveFast, sId: STATES.RUN },
+    { geId: GameEvents.moveFast, sId: STATES.DASH },
     { geId: GameEvents.jump, sId: STATES.JUMPSQUAT },
   ]);
 

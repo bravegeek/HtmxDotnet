@@ -1,5 +1,4 @@
 import { FlatVec } from '../physics/vector';
-import { Stage } from '../stage/stageComponents';
 import { World } from '../world/world';
 import {
   ECBComponent,
@@ -25,7 +24,6 @@ const defaultSpeedsBuilderOptions: speedBuilderOptions = (
 
 export class Player {
   private _world?: World;
-
   private readonly _Position: PositionComponent;
   private readonly _Velocity: VelocityComponent;
   private readonly _Flags: PlayerFlagsComponent;
@@ -49,28 +47,22 @@ export class Player {
     this._world = world;
   }
 
-  // This method is for inputs from the player
-  public AddXImpulse(impulse: number): void {
-    if (!this.IsGrounded()) {
-      this._Velocity.AddClampedXImpulse(
-        impulse,
-        this._Speeds.AerialSpeedInpulseLimit
-      );
-      return;
-    }
+  public AddWalkImpulse(impulse: number): void {
+    this._Velocity.AddClampedXImpulse(
+      this._Speeds.MaxWalkSpeed,
+      impulse * this._Speeds.WalkSpeedMulitplier
+    );
+  }
 
-    if (this._Flags.IsRunning()) {
-      this._Velocity.AddClampedXImpulse(this._Speeds.MaxRunSpeed, impulse);
-      return;
-    }
-
-    if (this._Flags.IsWakling()) {
-      this._Velocity.AddClampedXImpulse(this._Speeds.MaxWalkSpeed, impulse);
+  public AddJumpImpulse(): void {
+    if (this._Jump.HasJumps()) {
+      this._Velocity.Vel.Y = -this._Jump.JumpVelocity;
+      this._Jump.IncrementJumps();
     }
   }
 
   // This method is for inputs from the player
-  public AddYImpulse(impulse: number): void {
+  public AddGravityImpulse(impulse: number): void {
     if (this._Flags.IsFastFalling()) {
       this._Velocity.AddClampedYImpulse(impulse, this._Speeds.FastFallSpeed);
       return;
@@ -93,8 +85,21 @@ export class Player {
     this._ECB.MoveToPosition(x, y);
   }
 
+  public AddToPlayerXPosition(x: number): void {
+    this._Position.Pos.X += x;
+  }
+
+  public AddToPlayerYPosition(y: number): void {
+    this._Position.Pos.Y += y;
+  }
+
   public IsGrounded(): boolean {
-    const grnd = this._world!.stage!.StageVerticies.GetGround();
+    const grnd = this._world?.stage?.StageVerticies?.GetGround() ?? undefined;
+
+    if (grnd == undefined) {
+      return false;
+    }
+
     const grndLength = grnd.length - 1;
     for (let i = 0; i < grndLength; i++) {
       const va = grnd[i];
@@ -103,6 +108,7 @@ export class Player {
         return true;
       }
     }
+
     return false;
   }
 
@@ -128,5 +134,21 @@ export class Player {
 
   public get AerialVelocityDecay(): number {
     return this._Speeds.AerialVelocityDecay;
+  }
+
+  public FaceRight() {
+    this._Flags.FaceRight();
+  }
+
+  public FaceLeft() {
+    this._Flags.FaceLeft();
+  }
+
+  public ChangeDirections() {
+    if (this._Flags.IsFacingRight()) {
+      this.FaceLeft();
+      return;
+    }
+    this.FaceRight();
   }
 }

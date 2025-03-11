@@ -4,13 +4,18 @@ import {
   DASH_TURN_RELATIONS,
   IDLE_STATE_RELATIONS,
   RUN_RELATIONS,
+  RUN_TURN_RELATIONS,
+  RUN_STOP_RELATIONS,
   START_WALK_RELATIONS,
   STATES,
   STOP_DASH_RELATIONS,
   TURN_RELATIONS,
   WALK_RELATIONS,
+  JUMP_SQUAT_RELATIONS,
+  JUMP_RELATIONS,
 } from '../../JavaScript/game/FSM/FiniteState';
 
+// Idle tests
 test('IDLE ', () => {
   let res = IDLE_STATE_RELATIONS.mappings.getMapping(GameEvents.move);
   expect(res).toBe(STATES.START_WALK);
@@ -22,6 +27,7 @@ test('IDLE ', () => {
   expect(res).toBe(STATES.JUMPSQUAT);
 });
 
+//WALK TESTS
 test('START_WALK ', () => {
   expect(START_WALK_RELATIONS.mappings.getMapping(GameEvents.idle)).toBe(
     STATES.IDLE
@@ -87,4 +93,39 @@ test('RUN', () => {
   expect(RUN_RELATIONS.mappings.getMapping(GameEvents.jump)).toBe(
     STATES.JUMPSQUAT
   );
+});
+
+test('RUN_TURN', () => {
+  expect(RUN_TURN_RELATIONS.mappings.getMapping(GameEvents.jump)).toBe(
+    STATES.JUMPSQUAT
+  );
+  expect(RUN_TURN_RELATIONS.mappings.getDefault()).toBe(STATES.STOP_RUN_TURN);
+});
+
+test('RUN_STOP', () => {
+  expect(RUN_STOP_RELATIONS.mappings.getMapping(GameEvents.jump)).toBe(
+    STATES.JUMPSQUAT
+  );
+  expect(RUN_STOP_RELATIONS.mappings.getMapping(GameEvents.moveFast)).toBe(
+    STATES.DASH
+  );
+  expect(RUN_STOP_RELATIONS.mappings.getDefault()).toBe(STATES.IDLE);
+});
+
+test('STOP_RUN_TURN', () => {
+  expect(RUN_STOP_RELATIONS.mappings.getMapping(GameEvents.jump)).toBe(
+    STATES.JUMPSQUAT
+  );
+  expect(RUN_STOP_RELATIONS.mappings.getMapping(GameEvents.moveFast)).toBe(
+    STATES.DASH
+  );
+  expect(RUN_STOP_RELATIONS.mappings.getDefault()).toBe(STATES.IDLE);
+});
+
+test('JUMPSQUAT', () => {
+  expect(JUMP_SQUAT_RELATIONS.mappings.getDefault()).toBe(STATES.JUMP);
+});
+
+test('JUMP', () => {
+  expect(JUMP_RELATIONS.mappings.getDefault()).toBe(STATES.NFALL);
 });
