@@ -22,7 +22,7 @@ const StartWalk: FSMState = {
     if (ia.LXAxsis < 0) {
       p.FaceLeft;
     }
-    p.AddWalkInpulse(ia.LXAxsis);
+    p.AddWalkImpulse(ia.LXAxsis);
   },
   OnExit: (p: Player) => {
     console.log('Exit Start Walk');
@@ -42,7 +42,7 @@ const Walk: FSMState = {
     if (ia.LXAxsis < 0) {
       p.FaceLeft;
     }
-    p.AddWalkInpulse(ia.LXAxsis);
+    p.AddWalkImpulse(ia.LXAxsis);
   },
   OnExit: (p: Player) => {
     console.log('Exit Walk');

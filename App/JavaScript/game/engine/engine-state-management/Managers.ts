@@ -75,7 +75,7 @@ export class InputStorageManagerNetworked<Type>
   public ReturnFirstWrongGuess(
     lowerBound: number,
     upperBound: number
-  ): number | null {
+  ): number | undefined {
     for (let i = lowerBound; i <= upperBound; i++) {
       const guessed = this.guessedInputStore[i];
       const real = this.remoteInputStore[i];
@@ -88,7 +88,7 @@ export class InputStorageManagerNetworked<Type>
         return i - 1 < 0 ? 0 : i - 1;
       }
     }
-    return null;
+    return undefined;
   }
 }
 
@@ -101,7 +101,10 @@ export interface IInputStorageManagerNetworked<Type> {
   GetLastRemoteInput(): Type;
   GetLocalInputForFrame(frame: number): Type;
   GetGuessedInputForFrame(frame: number): Type;
-  ReturnFirstWrongGuess(lowerBound: number, upperBound: number): number | null;
+  ReturnFirstWrongGuess(
+    lowerBound: number,
+    upperBound: number
+  ): number | undefined;
 }
 
 export function InitISM<Type>(
@@ -172,7 +175,7 @@ export class FrameComparisonManager<Type>
       finalFrame
     );
 
-    if (syncFrame == null) {
+    if (syncFrame == undefined) {
       this.FrameStorageManager.SetSyncFrame(finalFrame);
       return;
     }

@@ -38,7 +38,6 @@ export function StageCollisionDetection(p: Player, s: Stage): boolean {
       move.AddToY(correctionDepth);
       let resolution = VectorAdder(playerPosDTO, move);
       p.SetPlayerPostion(resolution.X, resolution.Y);
-      //p.Flags.Ground();
       return true;
     }
 
@@ -47,11 +46,8 @@ export function StageCollisionDetection(p: Player, s: Stage): boolean {
       move.AddToX(correctionDepth);
       let resolution = VectorAdder(playerPosDTO, move);
       p.SetPlayerPostion(resolution.X, resolution.Y);
+
       return true;
-      // if (!p.Flags.IsGrounded()) {
-      //   p.Flags.SetRightWallRiddingTrue();
-      //   return true;
-      // }
     }
 
     // Left Wall Correction
@@ -59,11 +55,8 @@ export function StageCollisionDetection(p: Player, s: Stage): boolean {
       move.AddToX(-correctionDepth);
       let resolution = VectorAdder(playerPosDTO, move);
       p.SetPlayerPostion(resolution.X, resolution.Y);
+
       return true;
-      // if (!p.Flags.IsGrounded()) {
-      //   p.Flags.SetLeftWallRiddingTrue();
-      //   return true;
-      // }
     }
 
     //ceiling
@@ -71,19 +64,21 @@ export function StageCollisionDetection(p: Player, s: Stage): boolean {
       move.AddToY(-correctionDepth);
       let resolution = VectorAdder(playerPosDTO, move);
       p.SetPlayerPostion(resolution.X, resolution.Y);
+
       return true;
     }
 
-    // corner case
-
+    // corner case, literally
     if (Math.abs(normalX) > 0 && Math.abs(normalY) > 0) {
       const fix = move.X <= 0 ? move.Y : -move.Y;
       move.AddToX(fix);
       move._setY(0);
       const resolution = VectorAdder(playerPosDTO, move);
       p.SetPlayerPostion(resolution.X, resolution.Y);
+
       return true;
     }
+
     return false;
   }
 
@@ -94,8 +89,7 @@ function Gravity(p: Player) {
   const grav = 0.5;
 
   if (!p.IsGrounded()) {
-    // apply gravity
-    p.Velocity.Y += grav;
+    p.AddGravityImpulse(grav);
   }
 }
 
@@ -131,6 +125,7 @@ function ApplyVelocty(p: Player) {
     p.Velocity.X += aerialVelocityDecay;
   }
 
+  // What if we are fast falling?
   if (pvy > fallSpeed) {
     p.Velocity.Y -= aerialVelocityDecay;
   }

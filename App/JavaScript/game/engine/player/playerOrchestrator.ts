@@ -1,5 +1,4 @@
 import { FlatVec } from '../physics/vector';
-import { Stage } from '../stage/stageComponents';
 import { World } from '../world/world';
 import {
   ECBComponent,
@@ -25,7 +24,6 @@ const defaultSpeedsBuilderOptions: speedBuilderOptions = (
 
 export class Player {
   private _world?: World;
-
   private readonly _Position: PositionComponent;
   private readonly _Velocity: VelocityComponent;
   private readonly _Flags: PlayerFlagsComponent;
@@ -49,27 +47,7 @@ export class Player {
     this._world = world;
   }
 
-  // This method is for inputs from the player
-  // private AddXImpulse(impulse: number): void {
-  //   if (!this.IsGrounded()) {
-  //     this._Velocity.AddClampedXImpulse(
-  //       impulse,
-  //       this._Speeds.AerialSpeedInpulseLimit
-  //     );
-  //     return;
-  //   }
-
-  //   if (this._Flags.IsRunning()) {
-  //     this._Velocity.AddClampedXImpulse(this._Speeds.MaxRunSpeed, impulse);
-  //     return;
-  //   }
-
-  //   if (this._Flags.IsWakling()) {
-  //     this._Velocity.AddClampedXImpulse(this._Speeds.MaxWalkSpeed, impulse);
-  //   }
-  // }
-
-  public AddWalkInpulse(impulse: number): void {
+  public AddWalkImpulse(impulse: number): void {
     this._Velocity.AddClampedXImpulse(
       this._Speeds.MaxWalkSpeed,
       impulse * this._Speeds.WalkSpeedMulitplier
@@ -84,7 +62,7 @@ export class Player {
   }
 
   // This method is for inputs from the player
-  public AddYImpulse(impulse: number): void {
+  public AddGravityImpulse(impulse: number): void {
     if (this._Flags.IsFastFalling()) {
       this._Velocity.AddClampedYImpulse(impulse, this._Speeds.FastFallSpeed);
       return;
@@ -116,7 +94,12 @@ export class Player {
   }
 
   public IsGrounded(): boolean {
-    const grnd = this._world!.stage!.StageVerticies.GetGround();
+    const grnd = this._world?.stage?.StageVerticies?.GetGround() ?? undefined;
+
+    if (grnd == undefined) {
+      return false;
+    }
+
     const grndLength = grnd.length - 1;
     for (let i = 0; i < grndLength; i++) {
       const va = grnd[i];
@@ -125,6 +108,7 @@ export class Player {
         return true;
       }
     }
+
     return false;
   }
 
